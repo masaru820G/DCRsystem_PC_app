@@ -23,13 +23,13 @@ uv run python main_Flask_GUI.py
 - 4カ所からのカメラ取得画像が連続で表示される（予定）
 - 検出したサクランボが被害果か健全果なのか、画面にテキスト表示しパトライトの点灯色も表示（予定）
 
-### relay_module.py
+### module_relay.py
 - エアー制御するモジュール
   - 「健全果」であれば健全果エアーを開放
   - 「被害果」であれば被害果エアーを開放
   - 開放時間はn秒（予定）
     
-### patlite_module.py
+### module_patlite.py
 - パトライトを制御するモジュール
   - 検出したサクランボの状態に対し、点灯をコントロール
     - 「健全果」：青
@@ -37,9 +37,9 @@ uv run python main_Flask_GUI.py
     - 「裂果」：  黄
     - 残りは検討
    
-### cap_video_module.py（予定）
+### module_cap_video.py（予定）
 - サクランボを撮影するモジュール
 
-### yolo_module.py（予定）
+### module_yolo.py（予定）
 - 撮影した画像を、訓練済みモデルに渡し検出するモジュール
 
