@@ -28,9 +28,9 @@ from PySide6.QtGui import (
     QPixmap
 )
 
-import patlite_control as pl_ctr              # パトライト制御のモジュール
-import relay_control as RelayContoroller      # リレーボード制御のclassモジュール
-
+import modele_patlite as p_ctr              # パトライト制御のモジュール
+import modele_relay as r_ctr                # リレーボード制御のclassモジュール
+#import modele_cap_video as v_ctr           # カメラキャプチャのモジュール
 
 # --- ラズパイIPアドレス ---
 RPI_IP_ADDRESS = "192.168.2.2"
