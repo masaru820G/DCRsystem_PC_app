@@ -1,0 +1,17 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# requirements files
+requirements.txt
+
+# Python files
+relay_MoveCheck.py
+server_patlite.py
