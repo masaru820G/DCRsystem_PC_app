@@ -209,12 +209,12 @@ class MainWindow(QMainWindow):
     # --- 各動作 ---
     @Slot()
     def on_button_clicked_start(self):
-        send_rpi_command("/rotate")
+        #send_rpi_command("/rotate")
         self.label_motor_status.setText("動作中")
 
     @Slot()
     def on_button_clicked_stop(self):
-        send_rpi_command("/stop")
+        #send_rpi_command("/stop")
         self.label_motor_status.setText("停止中")
 
     @Slot()
@@ -233,7 +233,7 @@ class MainWindow(QMainWindow):
             # 'q' 以外の場合は、親クラスのデフォルト動作を実行(ex Tab キーでのフォーカス移動など)
             super().keyPressEvent(event)
 
-
+"""
 # --- ラズパイにコマンドを送る関数 ---
 def send_rpi_command(command):
     url = f"http://{RPI_IP_ADDRESS}:{RPI_PORT}{command}"
@@ -253,7 +253,7 @@ def send_rpi_command(command):
         print("[Error]: Timeout, not response")
     except requests.exceptions.RequestException as e:
         print(f"[Error]: sending command: {e}")
-
+"""
 
 
 # --- アプリケーションの実行 ---
