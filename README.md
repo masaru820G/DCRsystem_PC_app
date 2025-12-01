@@ -1,4 +1,4 @@
-# サクランボ病害虫鳥獣被害果除去システム 弐号機の制御フォルダ
+# サクランボ被害果除去システム_弐号機 PC側の制御フォルダ
 ## 環境
 - Windows 11
 - Python 3.12
@@ -12,9 +12,13 @@
 
 ## インストール
 ```bash
-pip install -r requirements.txt
+uv add -r requirements.txt
 ```
 
-## 概要
+## プログラム説明
 ### main_Flask_GUI.py
 -
+
+### main_Flask_GUI.py
+
+### main_Flask_GUI.py
