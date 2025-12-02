@@ -13,7 +13,7 @@
 ## インストール
 初回実行時にクローンしたフォルダに移動し、以下コマンドをターミナルで実行
 ```bash
-uv run python main_Flask_GUI.py
+uv run python first.py
 ```
 「実行環境」「使用するパッケージ」が自動でインストールされる
 
