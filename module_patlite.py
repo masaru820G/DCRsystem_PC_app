@@ -1,89 +1,161 @@
-# --- パトライトをYoloの結果により制御するプログラムmodule ---
+# --- パトライト制御プログラム (HID版) ---
 import hid
+import time
 
-# ベンダーIDとプロダクトIDの指定
-VENDER_ID = 0x191a   # ベンダーID
-PRODUCT_ID = 0x6001  # 製品ID
+# ==========================================
+# 設定エリア
+# ==========================================
+# ベンダーIDとプロダクトID (お使いの環境に合わせて変更なし)
+VENDER_ID = 0x191a   # PATLITE Corporation
+PRODUCT_ID = 0x6001  # NE-USB / PHN-USB series など
 
 # モジュール内のグローバル変数
 device = None
 
-
-# --- パトライト（hid device）を初期化。「OPEN」にする関数 ---
+# ==========================================
+# 初期化・終了処理
+# ==========================================
 def init_patlite():
+    """パトライトを初期化して接続する"""
     global device
     try:
-        # デバイスに接続
+        # 既に接続されている場合は何もしない
+        if device:
+            return True
+            
         device = hid.device()
         device.open(VENDER_ID, PRODUCT_ID)
 
-        print("パトライト接続成功")
-        # デバイスに関する情報を表示
-        print(f'Device manufacturer: {device.get_manufacturer_string()}')
-        print(f'Product: {device.get_product_string()}')
-
-        # 初期状態として消灯しておく
+        print(">> パトライト接続成功")
+        # 初期状態として消灯・ブザー停止
         patlite_off()
         return True
+    
     except Exception as e:
-        print(f"エラー: パトライトの接続に失敗しました。{e}")
-        print("デバイスが接続されているか、HIDAPIライブラリが正しくインストールされているか確認してください。")
+        print(f"!! エラー: パトライトの接続に失敗しました。\n{e}")
         device = None
         return False
 
+def close_patlite():
+    """パトライトを切断する"""
+    global device
+    if device is not None:
+        print(">> パトライトをCLOSEします。")
+        patlite_off() # 終了時に消灯
+        device.close()
+        device = None
 
-# --- パトライトに制御コマンドを送信する内部関数 ---
 def _send_command(data):
+    """内部用: コマンド送信関数"""
     global device
     if device is None:
-        print("エラー: パトライトが初期化されていません。")
+        print("!! エラー: パトライトが初期化されていません。")
         return False
 
     try:
         device.write(data)
         return True
     except Exception as e:
-        print(f"エラー: パトライトへの書き込みに失敗しました。{e}")
+        print(f"!! エラー: 書き込み失敗 {e}")
         return False
 
+# ==========================================
+# 色制御のメイン関数
+# ==========================================
+def set_patlite_color(red=False, yellow=False, green=False, blue=False, white=False, buzzer=False):
+    """
+    指定した色を点灯させる関数
+    引数: True=点灯, False=消灯
+    """
+    # データの初期化 (9バイト: ReportID + 8バイトデータ)
+    data = [0] * 9
+    
+    data[1] = 0x00 # コマンドバージョン
+    data[2] = 0x00 # コマンドID
+    
+    # --- ブザー制御 (Byte 3) ---
+    # 0x07: ブザー停止, 0x09: ブザー吹鳴 (モデルにより値が異なる場合があります)
+    # ここでは既存コードの 0x07(停止?) をベースにしつつ、吹鳴時はビットを立てる例とします
+    # ※お使いの機種の仕様に合わせて調整が必要な場合があります
+    if buzzer:
+        data[3] = 0x09 # 例: 吹鳴 (機種により 0x01 等の場合あり)
+    else:
+        data[3] = 0x07 # 停止
+        
+    data[4] = 0x00 # ブザー音量
 
-# --- パトライトを「異常状態（赤色）」にする関数 ---
-def patlite_bad():
-    data = [0]*9   #パトライト制御コマンド用データ配列(9byte)
-    data[1] = 0x00 #コマンドバージョン
-    data[2] = 0x00 #コマンドID
-    data[3] = 0x07 #ブザー制御
-    data[4] = 0x00 #ブザー音量
-    data[5] = 0x11 #LED制御 赤点灯
+    # --- LED制御 (Byte 5) ---
+    # パトライトのUSB制御は一般的にビット演算で色を指定します
+    # bit0: 赤, bit1: 黄, bit2: 緑, bit3: 青, bit4: 白
+    led_byte = 0x00
+    
+    if red:    led_byte |= 0x01  # 赤 (0000 0001)
+    if yellow: led_byte |= 0x02  # 黄 (0000 0010)
+    if green:  led_byte |= 0x04  # 緑 (0000 0100)
+    if blue:   led_byte |= 0x08  # 青 (0000 1000)
+    if white:  led_byte |= 0x10  # 白 (0001 0000)
+
+    data[5] = led_byte # 計算したLED値をセット
+    
+    # 残りのバイト
     data[6] = 0x00
     data[7] = 0x00
     data[8] = 0x00
 
-    print("パトライト: 異常 (赤色点灯)")
+    # デバッグ表示（現在どの色がONか）
+    status = []
+    if red: status.append("赤")
+    if yellow: status.append("黄")
+    if green: status.append("緑")
+    if blue: status.append("青")
+    if white: status.append("白")
+    if not status: status.append("消灯")
+    
+    print(f"パトライト制御: {','.join(status)} (Byte5: {hex(led_byte)})")
+    
     return _send_command(data)
 
-
-# --- パトライトを「OFF」にする関数 ---
+# ==========================================
+# 便利関数（旧コード互換 + アルファ）
+# ==========================================
 def patlite_off():
-    data = [0]*9   #パトライト制御コマンド用データ配列(9byte)
-    data[1] = 0x00 #コマンドバージョン
-    data[2] = 0x00 #コマンドID
-    data[3] = 0x07 #ブザー制御
-    data[4] = 0x00 #ブザー音量
-    data[5] = 0x00 #LED制御 消灯
-    data[6] = 0x00
-    data[7] = 0x00
-    data[8] = 0x00
+    """全消灯"""
+    return set_patlite_color() # 全てFalseなので消灯
 
-    print("パトライト: オフ(消灯)")
-    return _send_command(data)
+def patlite_red():
+    """赤点灯 (異常)"""
+    return set_patlite_color(red=True)
 
+def patlite_yellow():
+    """黄点灯 (警告)"""
+    return set_patlite_color(yellow=True)
 
-# --- パトライトを「CLOSE」にする関数 ---
-def close_patlite():
-    global device
-    if device is not None:
-        print("パトライトをCLOSEします。")
-        patlite_off() # 終了時に消灯
-        device.close()
-        device = None
+def patlite_green():
+    """緑点灯 (正常)"""
+    return set_patlite_color(green=True)
+
+# ==========================================
+# 動作確認用メイン
+# ==========================================
+if __name__ == "__main__":
+    if init_patlite():
+        try:
+            # 緑 (正常)
+            patlite_green()
+            time.sleep(2)
+
+            # 黄 (警告)
+            patlite_yellow()
+            time.sleep(2)
+
+            # 赤 (異常)
+            patlite_red()
+            time.sleep(2)
+
+            # 赤と黄色を同時点灯（複数指定も可能）
+            print("--- 複数点灯テスト ---")
+            set_patlite_color(red=True, yellow=True)
+            time.sleep(2)
+
+        finally:
+            close_patlite()

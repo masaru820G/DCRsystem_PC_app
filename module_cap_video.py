@@ -68,9 +68,18 @@ def main():
         print(f"フォルダの作成に失敗：{e}")
         return
     
+    # カメラオブジェクトの初期化
+    camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
+    camera.Open()
+
     #Pypylonリソースを初期化
     tlFactory = pylon.TlFactory.GetInstance()
     devices = tlFactory.EnumerateDevices()
+
+    # 保存した設定ファイル（.pfs）を読み込む
+    pylon.FeaturePersistence.Load("path/to/your/settings.pfs", camera.GetNodeMap(), True)
+
+    # これ以降、保存した設定でカメラが動作します
 
     if not devices:
         print("カメラが見つかりません。")
