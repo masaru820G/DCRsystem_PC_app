@@ -13,11 +13,19 @@
 ## インストール
 初回実行時にクローンしたフォルダに移動し、以下コマンドをターミナルで実行
 ```bash
-uv run python main_Flask_GUI.py
+uv run python first.py
 ```
 「実行環境」「使用するパッケージ」が自動でインストールされる
 
 ## プログラム説明
+```text
+main_Flask_GUI.py
+├── import module_relay
+├── import module_patlite
+├── import module_camera
+└── import module_yolo
+```
+
 ### main_Flask_GUI.py
 - GUIのボタン制御で回転台、エアー制御を行う
 - 4カ所からのカメラ取得画像が連続で表示される（予定）
