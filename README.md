@@ -19,11 +19,12 @@ uv run python first.py
 
 ## プログラム説明
 ```text
-main_Flask_GUI.py
+main.py
+├── import module_gui
 ├── import module_relay
 ├── import module_patlite
-├── import module_camera
-└── import module_yolo
+├── import module_cap_video
+      └── import module_yolo
 ```
 
 ### main_Flask_GUI.py
