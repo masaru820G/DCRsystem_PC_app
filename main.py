@@ -21,25 +21,20 @@ RPI_IP_ADDRESS = "192.168.2.2"
 RPI_PORT = 5000
 
 # ==========================================================
-# ★追加クラス：通信を裏で行う作業員 (Worker)
+# 汎用バックグラウンドタスク用クラス
 # ==========================================================
-class NetworkWorker(QRunnable):
-    def __init__(self, url):
+class TaskWorker(QRunnable):
+    def __init__(self, func, *args, **kwargs):
         super().__init__()
-        self.url = url
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
 
     def run(self):
-        """
-        このメソッドの中身はメインのGUIとは別の世界(スレッド)で実行されます。
-        ここで数秒待機が発生しても、画面は止まりません。
-        """
         try:
-            print(f" >> [Background Sending]: {self.url}")
-            # ここで通信！ (タイムアウトを短めに設定)
-            response = requests.get(self.url, timeout=2)
-            print(f" << [Response]: {response.status_code}")
+            self.func(*self.args, **self.kwargs)            # 渡された関数を実行 (引数付き)
         except Exception as e:
-            print(f" !! [Network Error]: {e}")
+            print(f" !! [Background Task Error]: {e}")
 
 # ==========================================================
 # スタートアップウィンドウ
@@ -50,7 +45,7 @@ class StartupWindow(module_gui.StartupWindowUI):
         self.button_start.clicked.connect(self.launch_main)
     def launch_main(self):
         self.main_window = MainWindow()
-        self.main_window.show()
+        self.main_window.showFullScreen()
         self.close()
 
 # ==========================================================
@@ -59,46 +54,62 @@ class StartupWindow(module_gui.StartupWindowUI):
 class MainWindow(module_gui.MainWindowUI):
     def __init__(self):
         super().__init__()
-        # ★重要：スレッド管理プールの作成
+        # スレッド管理プールの作成
         self.thread_pool = QThreadPool()
         print(f"Multithreading initialized. Max threads: {self.thread_pool.maxThreadCount()}")
         # トグルスイッチの接続 ---
-        self.toggle.toggled.connect(self.on_main_toggled)
+        self.toggle_switch.toggled.connect(self.on_main_toggled)
         # 設定ボタンの接続
         self.button_setting.clicked.connect(self.on_setting_button)
         # 電源ボタンの接続
         self.button_power.clicked.connect(self.on_power_bottom)
 
+    # --- バックグラウンドで関数を実行するヘルパー関数 ---
+    def run_in_background(self, func, *args, **kwargs):
+        """
+        渡された関数をスレッドプールで実行します。
+        例: self.run_in_background(p_ctr.set_patlite_color, "RED")
+        """
+        worker = TaskWorker(func, *args, **kwargs)
+        self.thread_pool.start(worker)
+
+    # --- ラズパイと通信する関数 -------------------
+    def __async_raspi_request(self, command):
+        url = f"http://{RPI_IP_ADDRESS}:{RPI_PORT}{command}"
+        try:
+            print(f" >> [Sending]: {url}")
+            requests.get(url, timeout=2)
+            print(" << [Sent]")
+        except Exception as e:
+            print(f" !! [Net Error]: {e}")
+
     # --- トグルスイッチ状態変更イベント --------------------------
     @Slot(bool)
     def on_main_toggled(self, checked):
-        # 1. まず見た目を瞬時に更新 (待たない)
+        self.button_setting.set_locked(checked)
         if checked:
-            print("Action: Switch ON")
             self.label_toggle_status.setText("動作中")
             self.label_toggle_status.setStyleSheet("""
                 font-family: "Meiryo"; font-size: 30px; font-weight: bold;
                 color: #32CD32; qproperty-alignment: 'AlignCenter';
             """)
             # 2. 裏でコマンド送信 (非同期)
-            #self.send_async("/rotate")
+            #self.run_in_background(self.__async_raspi_request, "/rotate")
         else:
-            print("Action: Switch OFF")
             self.label_toggle_status.setText("停止中")
             self.label_toggle_status.setStyleSheet("""
                 font-family: "Meiryo"; font-size: 30px; font-weight: bold;
                 color: #888888; qproperty-alignment: 'AlignCenter';
             """)
             # 2. 裏でコマンド送信 (非同期)
-            #self.send_async("/stop")
-            #self.r_ctr.stop()  # リレーボード停止
+            #self.run_in_background(self.__async_raspi_request, "/stop")
+            #self.run_in_background(r_ctr.stop)  # リレーボード停止
 
     # --- 設定ボタン押下イベント -------------------
     @Slot()
     def on_setting_button(self):
         self.settings_window = SubWindow(parent_window=self)
         self.settings_window.show()
-        print("設定ボタンが押されました。")
 
     # --- 電源ボタン押下イベント -------------------
     @Slot()
@@ -108,43 +119,29 @@ class MainWindow(module_gui.MainWindowUI):
         #r_ctr.close_relay()             # 画面を閉じる前に、リレーボードを閉じる
         self.close()                    # アプリケーションを閉じる
 
-    # --- 非同期でコマンドを送る関数-------------------
-    def send_async(self, command):
-        """
-        GUIを止めずにラズパイへコマンドを送るための関数
-        requests.get を直接書かず、必ずこれを通してください。
-        """
-        url = f"http://{RPI_IP_ADDRESS}:{RPI_PORT}{command}"
-        # 作業員(Worker)を作成して、プールに投げる
-        worker = NetworkWorker(url)
-        self.thread_pool.start(worker)
-
     # --- キー入力イベント ------------------------------------------
     def keyPressEvent(self, event: QKeyEvent):
         # [1] キーで「カビ（紫）」
         if event.key() == Qt.Key.Key_1:
-            print("Key input: 1 -> カビ")
             self.label_dam.setText("カビ")
             self.label_dam.setStyleSheet("""
                 font-family: "Meiryo"; font-size: 30px; font-weight: bold;
-                color: #FFFFFF; background-color: #800080; border-radius: 5px;
-                border: 2px solid #000000;
+                color: #FFFFFF; background-color: #800080;
+                border: 1px solid #000000;
                 qproperty-alignment: 'AlignCenter';
             """)
             # もしここでも通信するなら: self.send_async("/detect_mold")
-            p_ctr.set_patlite_color(p_ctr.LedPattern.VIOLET)
-        # [2] キーで「未熟果（黄色）」
+            self.run_in_background(p_ctr.set_patlite_color, p_ctr.LedPattern.VIOLET)    # 非同期で実行
         elif event.key() == Qt.Key.Key_2:
-            print("Key input: 2 -> 未熟果")
             self.label_dam.setText("未熟果")
             self.label_dam.setStyleSheet("""
                 font-family: "Meiryo"; font-size: 30px; font-weight: bold;
-                color: #000000; background-color: #FFFF00; border-radius: 5px;
-                border: 2px solid #000000;
+                color: #000000; background-color: #FFFF00;
+                border: 1px solid #000000;
                 qproperty-alignment: 'AlignCenter';
             """)
             # もしここでも通信するなら: self.send_async("/detect_unripe")
-            p_ctr.set_patlite_color(p_ctr.LedPattern.YELLOW)
+            self.run_in_background(p_ctr.set_patlite_color, p_ctr.LedPattern.YELLOW)    # 非同期で実行
         else:
             super().keyPressEvent(event)
 
@@ -152,12 +149,30 @@ class MainWindow(module_gui.MainWindowUI):
 # サブウィンドウ
 # ==========================================================
 class SubWindow(module_gui.SubWindowUI):
+    # --- 戻るボタン押下イベント -------------------
     def __init__(self, parent_window):
         super().__init__()
+        self.button_up_speed.clicked.connect(self.on_up_speed)
+        self.button_down_speed.clicked.connect(self.on_down_speed)
         self.parent_window = parent_window
         self.button_back.clicked.connect(self.go_back)
+
+    # --- speed upボタン押下イベント -------------------
+    @Slot()
+    def on_up_speed(self):
+        print("speed up ボタンが押されました。")
+        # speed up 処理をここに追加
+
+    # --- speed downボタン押下イベント -------------------
+    @Slot()
+    def on_down_speed(self):
+        print("speed down ボタンが押されました。")
+        # speed down 処理をここに追加
+
+    # --- 戻るボタン押下イベント -------------------
+    @Slot()
     def go_back(self):
-        self.parent_window.show()
+        self.parent_window.showFullScreen()
         self.close()
 
 # ==========================================================
