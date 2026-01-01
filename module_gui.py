@@ -1,6 +1,8 @@
 # -------------------------------------------------
 # DCR_systemのGUIデザイン定義ファイル
 # -------------------------------------------------
+import sys
+import os
 from PySide6.QtWidgets import (
     QWidget, QMainWindow, QLabel, QPushButton, QCheckBox, QVBoxLayout
 )
@@ -68,6 +70,19 @@ TOGGLE_LABEL_STYLE = """
 font-family: "Meiryo"; font-size: 24px; font-weight: bold;
 color: #888888; qproperty-alignment: 'AlignCenter';
 """
+
+# ==========================================================
+# パス取得関数
+# ==========================================================
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 # ==========================================
 # クリック可能なラベルクラス
@@ -224,7 +239,7 @@ class MainWindowUI(QMainWindow):
         setting_y = 40  # 上からの余白
         self.button_setting.move(setting_x, setting_y)
         # 画像読み込みとセット
-        pixmap = QPixmap("setting.png")
+        pixmap = QPixmap(resource_path("setting.png"))
         if not pixmap.isNull():
             # 画像をラベルのサイズに合わせてリサイズ（スムージング処理付き）
             scaled_pixmap = pixmap.scaled(
@@ -245,7 +260,7 @@ class MainWindowUI(QMainWindow):
         power_y = 180  # 上からの余白
         self.button_power.move(power_x, power_y)
         # 画像読み込みとセット
-        pixmap = QPixmap("power_supply.png")
+        pixmap = QPixmap(resource_path("power_supply.png"))
         if not pixmap.isNull():
             # 画像をラベルのサイズに合わせてリサイズ（スムージング処理付き）
             scaled_pixmap = pixmap.scaled(

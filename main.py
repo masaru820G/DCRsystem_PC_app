@@ -11,7 +11,7 @@ from PySide6.QtCore import Slot, Qt, QRunnable, QThreadPool
 from PySide6.QtGui import QKeyEvent
 
 # デザインファイルを読み込む
-import module_view
+import module_gui
 
 # 制御モジュール
 import module_patlite as p_ctr
@@ -44,7 +44,7 @@ class NetworkWorker(QRunnable):
 # ==========================================================
 # スタートアップウィンドウ
 # ==========================================================
-class StartupWindow(module_view.StartupWindowUI):
+class StartupWindow(module_gui.StartupWindowUI):
     def __init__(self):
         super().__init__()
         self.button_start.clicked.connect(self.launch_main)
@@ -56,7 +56,7 @@ class StartupWindow(module_view.StartupWindowUI):
 # ==========================================================
 # メインウィンドウ
 # ==========================================================
-class MainWindow(module_view.MainWindowUI):
+class MainWindow(module_gui.MainWindowUI):
     def __init__(self):
         super().__init__()
         # ★重要：スレッド管理プールの作成
@@ -151,7 +151,7 @@ class MainWindow(module_view.MainWindowUI):
 # ==========================================================
 # サブウィンドウ
 # ==========================================================
-class SubWindow(module_view.SubWindowUI):
+class SubWindow(module_gui.SubWindowUI):
     def __init__(self, parent_window):
         super().__init__()
         self.parent_window = parent_window
