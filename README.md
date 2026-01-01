@@ -19,30 +19,40 @@ uv run python first.py
 
 ## プログラム説明
 ```text
-main_Flask_GUI.py
+main.py
+├── import module_gui
+      ├── settings.png
+      └── power_supply.png
 ├── import module_relay
 ├── import module_patlite
-├── import module_camera
-└── import module_yolo
+├── import module_cap_video
+      └── import module_yolo
 ```
 
-### main_Flask_GUI.py
-- GUIのボタン制御で回転台、エアー制御を行う
+### main.py
+- 全体を統括するメインプログラム
+- GUIのボタンで各制御を行う
+  
+### module_gui.py
+- 管理トグルボタン（モータ, エアー）
+- 設定ボタン（モータ速度, モード変更）
+- 電源ボタン
 - 4カ所からのカメラ取得画像が連続で表示される（予定）
-- 検出したサクランボが被害果か健全果なのか、画面にテキスト表示しパトライトの点灯色も表示（予定）
-
+- ID5つまで履歴表示（ID, 病害名, 信頼度）
+- 検出したサクランボが被害果か健全果なのか、画面に表示（パトライト色, 病害名, 信頼度）
+  
 ### module_relay.py
 - エアー制御するモジュール
   - 「健全果」であれば健全果エアーを開放
   - 「被害果」であれば被害果エアーを開放
-  - 開放時間はn秒（予定）
+  - 開放時間はプログラム上で計算し、速度変更にも対応（予定）
     
 ### module_patlite.py
 - パトライトを制御するモジュール
   - 検出したサクランボの状態に対し、点灯をコントロール
-    - 「健全果」：青
-    - 「カビ」：  紫
-    - 「裂果」：  黄
+    - 健全果：      白
+    - カビ：        紫
+    - 裂果：        黄
     - 残りは検討
    
 ### module_cap_video.py（予定）
