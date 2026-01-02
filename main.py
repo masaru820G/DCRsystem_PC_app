@@ -106,39 +106,74 @@ class MainWindow(module_gui.MainWindowUI):
         #r_ctr.close_relay()             # 画面を閉じる前に、リレーボードを閉じる
         self.close()                    # アプリケーションを閉じる
 
-    # --- 履歴表示を更新する関数 -------------------
+    # --- 履歴表示を更新する関数 (HTMLテーブル版) -------------------
     def update_history_display(self):
-        header_id   = "　ＩＤ　"       # 全角4文字
-        header_res  = "　　結果　　"   # 全角6文字
-        header_conf = "　　信頼度　　" # 全角7文字
-        display_text = f"|{header_id}|{header_res}|{header_conf}|\n"
-        display_text += "|" + "－" * 4 + "|" + "－" * 6 + "|" + "－" * 7 + "|\n"
-
+        # 履歴データをHTMLのテーブル行(tr)に変換する
+        rows_html = ""
         for item in self.history_data:
-            # [ID列] 右寄せ
-            id_half = f"{item['id']:03}"
-            id_full = id_half.translate(str.maketrans("0123456789", "０１２３４５６７８９"))
-            # 幅合わせ: (4 - 文字数) 個の全角スペースを左に足す
-            # 例: "　００１"
-            id_str = "　" * (4 - len(id_full)) + id_full
+            # IDの作成 (半角->全角変換)
+            id_txt = f"{item['id']:03}".translate(str.maketrans("0123456789", "０１２３４５６７８９"))
 
-            # [判定結果列] 右寄せ
-            r_text = item['result']
-            # 幅合わせ: (6 - 文字数) 個の全角スペースを左に足す
-            res_str = "　" * (6 - len(r_text)) + r_text
+            # 結果の作成 (空白除去 & 色判定)
+            raw_text = item['result']
+            if "カビ" in raw_text:
+                color_code = "#EE82EE"
+            elif "未熟果" in raw_text:
+                color_code = "#FFFF00"
+            elif "健全果" in raw_text:
+                color_code = "#FFFFFF"
+            elif "果梗裂果" in raw_text:
+                color_code = "#0040FF"
 
-            # [信頼度列] 右寄せ
-            conf_half = f"{item['conf']}　％"
-            conf_full = conf_half.translate(str.maketrans("0123456789", "０１２３４５６７８９"))
-            # 幅合わせ: (7 - 文字数) 個の全角スペースを左に足す
-            # 例: "　００１"
-            conf_str = "　" * (7 - len(conf_full)) + conf_full
+            # 信頼度の作成
+            conf_txt = f"{item['conf']} ％".translate(str.maketrans("0123456789", "０１２３４５６７８９"))
 
-            # 行を結合して追加
-            line = f"|{id_str}|{res_str}|{conf_str}|\n"
-            display_text += line
+            # 行の組み立て (HTMLテーブルのタグを使用)
+            rows_html += f"""
+            <tr>
+                <td align="center" style="border-right: 1px solid #00FF00;">{id_txt}</td>
+                <td align="center" style="border-right: 1px solid #00FF00; color:{color_code};">{raw_text}</td>
+                <td align="center" style="border-right: 1px solid #00FF00;">{conf_txt}</td>
+            </tr>
+            """
 
-        self.label_history.setText(display_text)
+        # 全体のHTMLを組み立てる
+        full_html = f"""
+        <html>
+        <head>
+        <style>
+            table {{
+                border-collapse: collapse; /* 線の隙間をなくす */
+                width: 100%;
+                border: 1px solid #00FF00; /* これで消えていた「IDの左」と「信頼度の右」の線が復活します */
+            }}
+            /* ヘッダーセルの設定 */
+            th {{
+                font-family: "MS Gothic"; font-size: 20px; font-weight: bold; color: #00FF00;
+                border-right: 1px solid #00FF00;   /* 縦の区切り線 */
+                padding: 4px;
+            }}
+            /* データセルの設定 */
+            td {{
+                font-family: "MS Gothic"; font-size: 16px; font-weight: bold; color: #00FF00;
+                padding: 3px;
+            }}
+        </style>
+        </head>
+        <body style="background-color:#000000;">
+            <table cellspacing="0">
+                <tr>
+                    <th width="20%">ＩＤ</th>
+                    <th width="40%">結果</th>
+                    <th width="40%">信頼度</th>
+                </tr>
+                {rows_html}
+            </table>
+        </body>
+        </html>
+        """
+        
+        self.label_history.setText(full_html)
 
     # --- キー入力イベント ------------------------------------------
     def keyPressEvent(self, event: QKeyEvent):
@@ -151,7 +186,7 @@ class MainWindow(module_gui.MainWindowUI):
         pattern = None
 
         if event.key() == Qt.Key.Key_1:
-            disease_name = "　カビ"
+            disease_name = "カビ"
             pattern = p_ctr.LedPattern.VIOLET
             self.label_dam.setText("カビ")
             self.label_dam.setStyleSheet("""
@@ -184,14 +219,24 @@ class MainWindow(module_gui.MainWindowUI):
                 border: 1px solid #000000;
                 qproperty-alignment: 'AlignCenter';
             """)
+        elif event.key() == Qt.Key.Key_4:
+            disease_name = "果梗裂果"
+            pattern = p_ctr.LedPattern.BLUE
+            self.label_dam.setText("果梗裂果")
+            self.label_dam.setStyleSheet("""
+                font-family: "Meiryo"; font-size: 30px; font-weight: bold;
+                color: #000000; background-color: #0040FF;
+                border: 1px solid #000000;
+                qproperty-alignment: 'AlignCenter';
+            """)
             # もしここでも通信するなら: self.send_async("/detect_unripe")
             self.run_in_background(p_ctr.set_patlite_color, p_ctr.LedPattern.WHITE)
 
         # 判定処理が行われた場合のみ履歴更新
         if disease_name != "":
-            # 1. パトライト制御 (非同期)
+            # パトライト制御 (非同期)
             self.run_in_background(p_ctr.set_patlite_color, pattern)
-            # 2. 履歴データの追加処理
+            # 履歴データの追加処理
             confidence = random.randint(60, 95) # 信頼度ランダム (60~95)
             # 辞書として作成
             record = {
@@ -202,7 +247,7 @@ class MainWindow(module_gui.MainWindowUI):
             # リストに追加
             self.history_data.append(record)
             # 古いものを削除
-            if len(self.history_data) > 7:
+            if len(self.history_data) > 10:
                 self.history_data.pop(0)
             # IDを加算
             self.current_id += 1

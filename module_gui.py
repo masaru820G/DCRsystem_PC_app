@@ -26,10 +26,10 @@ ICON_SETTING_SIZE = 100                     # 設定アイコンサイズ
 ICON_POWER_SIZE = 100                       # 電源アイコンサイズ
 
 LABEL_HISTORY_SIZE_W = 380                  # 履歴ラベルの幅
-LABEL_HISTORY_SIZE_H = VIEW_CAM_SIZE_H - ICON_SETTING_SIZE - MARGIN_Y     # 履歴ラベルの高さ
+LABEL_HISTORY_SIZE_H = VIEW_CAM_SIZE_H - ICON_SETTING_SIZE - MARGIN_Y * 0.5     # 履歴ラベルの高さ
 
-LABEL_DAM_SIZE_W = 380                      # 病害名表示ラベルサイズw
-LABEL_DAM_SIZE_H = 100                      # 病害名表示ラベルサイズh
+LABEL_DAMAGE_SIZE_W = 380                      # 病害名表示ラベルサイズw
+LABEL_DAMAGE_SIZE_H = 100                      # 病害名表示ラベルサイズh
 
 LABEL_MANAGEMENT_SIZE_W = 380               # システム管理ラベルサイズw
 LABEL_MANAGEMENT_SIZE_H = 60                # システム管理ラベルサイズh
@@ -62,14 +62,13 @@ font-size: 20px; font-weight: bold; border-radius: 5px;
 qproperty-alignment: 'AlignCenter';
 """
 LABEL_HISTORY_STYLE = """
-font-family: "Consolas", "Monospace", "Meiryo";
+font-family: "MS Gothic";
 font-size: 18px; font-weight: bold;
 color: #00FF00; background-color: #000000;
 border: 2px solid #555555; border-radius: 5px;
-qproperty-alignment: 'AlignTop | AlignLeft';
-padding: 10px;
+qproperty-alignment: 'AlignTop | AlignLeft';;
 """
-LABEL_DAM_STYLE = """
+LABEL_DAMAGE_STYLE = """
 font-family: "Meiryo"; font-size: 30px; font-weight: bold;
 color: #000000; background-color: #FFFFFF;
 border: 1px solid #000000;
@@ -334,7 +333,7 @@ class MainWindowUI(QMainWindow):
         # --- 判定履歴表示エリア ------------------------------
         # 配置座標
         history_x = BASE_X + MARGIN_X
-        history_y = ICON_SETTING_SIZE + MARGIN_Y * 2
+        history_y = ICON_SETTING_SIZE + MARGIN_Y * 1.5
 
         self.label_history = QLabel("Wait for input...", self)
         self.label_history.setFixedSize(LABEL_HISTORY_SIZE_W, LABEL_HISTORY_SIZE_H)
@@ -343,19 +342,19 @@ class MainWindowUI(QMainWindow):
 
         # --- 病害管理エリア ------------------------------
         # 配置座標
-        dam_x = WINDOW_W - LABEL_DAM_SIZE_W - MARGIN_X
+        dam_x = WINDOW_W - LABEL_DAMAGE_SIZE_W - MARGIN_X
         dam_y = BASE_Y
 
         # 病害名表示ラベル
         self.label_dam = QLabel("病害結果", self)
-        self.label_dam.setFixedSize(LABEL_DAM_SIZE_W, LABEL_DAM_SIZE_H)
-        self.label_dam.setStyleSheet(LABEL_DAM_STYLE)
+        self.label_dam.setFixedSize(LABEL_DAMAGE_SIZE_W, LABEL_DAMAGE_SIZE_H)
+        self.label_dam.setStyleSheet(LABEL_DAMAGE_STYLE)
         self.label_dam.move(dam_x, dam_y)
 
         # --- システム管理エリア ------------------------------
         # 配置座標
         label_management_x = WINDOW_W - LABEL_MANAGEMENT_SIZE_W - MARGIN_X
-        label_management_y = dam_y + LABEL_DAM_SIZE_H + MARGIN_Y * 3
+        label_management_y = dam_y + LABEL_DAMAGE_SIZE_H + MARGIN_Y * 3
         toggle_switch_x = label_management_x + MARGIN_X * 5
         toggle_switch_y = label_management_y + LABEL_MANAGEMENT_SIZE_H + MARGIN_Y
         toggle_status_x = toggle_switch_x
