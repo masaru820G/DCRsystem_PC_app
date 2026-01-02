@@ -151,7 +151,7 @@ class MainWindow(module_gui.MainWindowUI):
         pattern = None
 
         if event.key() == Qt.Key.Key_1:
-            disease_name = "カビ"
+            disease_name = "　カビ"
             pattern = p_ctr.LedPattern.VIOLET
             self.label_dam.setText("カビ")
             self.label_dam.setStyleSheet("""
@@ -208,7 +208,7 @@ class MainWindow(module_gui.MainWindowUI):
             self.current_id += 1
             # 確認用ログ
             _, color_name = pattern
-            print(f"Latest History: |ID: {record['id']:03} | 判定結果: {record['result']}({color_name}) | 信頼度: {record['conf']} %")
+            print(f"Latest History: | ID: {record['id']:03} | 判定結果: {record['result']}({color_name}) | 信頼度: {record['conf']} % |")
             # 画面更新
             self.update_history_display()
         else:
