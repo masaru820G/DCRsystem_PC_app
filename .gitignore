@@ -9,6 +9,7 @@ wheels/
 # Virtual environments
 .venv
 main_nokeyevent.py
+main2.py
 # requirements files
 
 # Python files
