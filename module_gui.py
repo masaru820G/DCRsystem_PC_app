@@ -22,49 +22,52 @@ MARGIN_Y = 10                           # 画面の余白y
 VIEW_CAM_SIZE_W = int(WINDOW_W * 0.34) // 10 * 10     # カメラ表示サイズw (10の倍数に丸める)
 VIEW_CAM_SIZE_H = (WINDOW_H - MARGIN_Y * 3) / 2       # カメラ表示サイズh
 
-ICON_SETTING_SIZE = 100                  # 設定アイコンサイズ
-ICON_POWER_SIZE = 100                    # 電源アイコンサイズ
+ICON_SETTING_SIZE = 100                     # 設定アイコンサイズ
+ICON_POWER_SIZE = 100                       # 電源アイコンサイズ
 
-LABEL_DAM_SIZE_W = 360                   # 病害名表示ラベルサイズw
-LABEL_DAM_SIZE_H = 80                   # 病害名表示ラベルサイズh
+LABEL_HISTORY_SIZE_W = 380                  # 履歴ラベルの幅
+LABEL_HISTORY_SIZE_H = VIEW_CAM_SIZE_H - ICON_SETTING_SIZE - MARGIN_Y     # 履歴ラベルの高さ
 
-LABEL_MANAGEMENT_SIZE_W = 360            # システム管理ラベルサイズw
-LABEL_MANAGEMENT_SIZE_H = 55             # システム管理ラベルサイズh
+LABEL_DAM_SIZE_W = 380                      # 病害名表示ラベルサイズw
+LABEL_DAM_SIZE_H = 100                      # 病害名表示ラベルサイズh
 
-SWITCH_TOGGLE_SIZE_W = 260               # トグルスイッチサイズw
-SWITCH_TOGGLE_SIZE_H = 130               # トグルスイッチサイズh
-LABEL_TOGGLE_SIZE_W = 260                # トグルスイッチ状態表示ラベルサイズw
-LABEL_TOGGLE_SIZE_H = 50                 # トグルスイッチ状態表示ラベルサイズh
+LABEL_MANAGEMENT_SIZE_W = 380               # システム管理ラベルサイズw
+LABEL_MANAGEMENT_SIZE_H = 60                # システム管理ラベルサイズh
 
-BASE_X = (MARGIN_X + VIEW_CAM_SIZE_W) * 2    # システム管理エリア基準x
-BASE_Y = MARGIN_Y * 2 + VIEW_CAM_SIZE_H    # システム管理エリア基準y
+SWITCH_TOGGLE_SIZE_W = 280                  # トグルスイッチサイズw
+SWITCH_TOGGLE_SIZE_H = 140                  # トグルスイッチサイズh
+LABEL_TOGGLE_SIZE_W = 280                   # トグルスイッチ状態表示ラベルサイズw
+LABEL_TOGGLE_SIZE_H = 40                    # トグルスイッチ状態表示ラベルサイズh
+
+BASE_X = (MARGIN_X + VIEW_CAM_SIZE_W) * 2   # システム管理エリア基準x
+BASE_Y = MARGIN_Y * 2 + VIEW_CAM_SIZE_H     # システム管理エリア基準y
 
 # --- サブウインドウゾーン ----------------------------
-ICON_UP_SPEED_SIZE_W = 300               # speedアップアイコンサイズw
-ICON_UP_SPEED_SIZE_H = 150               # speedアップアイコンサイズh
-ICON_DOWN_SPEED_SIZE_W = 300             # speedダウンアイコンサイズw
-ICON_DOWN_SPEED_SIZE_H = 150             # speedダウンアイコンサイズh
+ICON_UP_SPEED_SIZE_W = 300                  # speedアップアイコンサイズw
+ICON_UP_SPEED_SIZE_H = 150                  # speedアップアイコンサイズh
+LABEL_SPEED_SIZE_W = 300                    # speedラベルサイズw
+LABEL_SPEED_SIZE_H = 150                    # speedラベルサイズh
+ICON_DOWN_SPEED_SIZE_W = 300                # speedダウンアイコンサイズw
+ICON_DOWN_SPEED_SIZE_H = 150                # speedダウンアイコンサイズh
+
+BUTTON_BACK_SIZE = 130                      # 戻るボタンサイズ
 
 # ==========================================================
 # スタイル定義
 # ==========================================================
-BUTTON_MAIN_STYLE = """
-font-family: "Meiryo"; font-size: 30px; font-weight: bold;
-color: #00FFFF; background-color: #333333; border-radius: 60px;
-"""
-LABEL_MANAGEMENT_STYLE = """
-font-family: "Meiryo"; font-size: 40px; font-weight: bold;
-color: #000000; background-color: #FFFFFF; border-radius: 5px;
+# --- メインウインドウゾーン ----------------------------
+LABEL_CAM_STYLE = """
+background-color: #333333; color: #FFFFFF;
+font-size: 20px; font-weight: bold; border-radius: 5px;
 qproperty-alignment: 'AlignCenter';
 """
-BUTTON_SUB_STYLE = """
-font-family: "Meiryo"; font-size: 20px; font-weight: bold;
-color: #00FFFF; background-color: #333333; border-radius: 50px;
-"""
-LABEL_SUB_STYLE = """
-font-family: "Meiryo"; font-size: 15px; font-weight: bold;
-color: #000000; background-color: #FFFFFF; border-radius: 5px;
-qproperty-alignment: 'AlignCenter';
+LABEL_HISTORY_STYLE = """
+font-family: "Consolas", "Monospace", "Meiryo";
+font-size: 18px; font-weight: bold;
+color: #00FF00; background-color: #000000;
+border: 2px solid #555555; border-radius: 5px;
+qproperty-alignment: 'AlignTop | AlignLeft';
+padding: 10px;
 """
 LABEL_DAM_STYLE = """
 font-family: "Meiryo"; font-size: 30px; font-weight: bold;
@@ -72,19 +75,25 @@ color: #000000; background-color: #FFFFFF;
 border: 1px solid #000000;
 qproperty-alignment: 'AlignCenter';
 """
-LABEL_STATUS_STYLE = """
-font-size: 24px; font-weight: bold; color: #000000;
-background-color: #adff2f; border-radius: 5px;
-qproperty-alignment: 'AlignCenter';
-"""
-LABEL_CAM_STYLE = """
-background-color: #333333; color: #FFFFFF;
-font-size: 20px; font-weight: bold; border-radius: 5px;
+LABEL_MANAGEMENT_STYLE = """
+font-family: "Meiryo"; font-size: 40px; font-weight: bold;
+color: #000000; background-color: #FFFFFF; border-radius: 5px;
 qproperty-alignment: 'AlignCenter';
 """
 LABEL_TOGGLE_STYLE = """
-font-family: "Meiryo"; font-size: 24px; font-weight: bold;
+font-family: "Meiryo"; font-size: 30px; font-weight: bold;
 color: #888888; qproperty-alignment: 'AlignCenter';
+"""
+
+# --- サブウインドウゾーン ----------------------------
+BUTTON_SUB_STYLE = """
+font-family: "Meiryo"; font-size: 20px; font-weight: bold;
+color: #00FFFF; background-color: #333333; border-radius: 50px;
+"""
+LABEL_SPEED_STYLE = """
+font-family: "Meiryo"; font-size: 60px; font-weight: bold;
+color: #000000; background-color: transparent;
+qproperty-alignment: 'AlignCenter';
 """
 
 # ==========================================================
@@ -136,7 +145,6 @@ class ClickableLabel(QLabel):
         else:
             opacity_effect.setOpacity(1.0)
         self.setGraphicsEffect(opacity_effect)
-
 
 # ==========================================
 # ToggleSwitch クラス (部品)
@@ -192,7 +200,6 @@ class ToggleSwitch(QCheckBox):
 
     def hitButton(self, pos): return self.contentsRect().contains(pos)
 
-
 # ==========================================
 # スタートアップウインドウUI
 # ==========================================
@@ -213,7 +220,6 @@ class StartupWindowUI(QWidget):
         self.button_start.move(120, 150)
         self.button_start.setStyleSheet("background-color: #FF4500; color: white; font-size: 24px; border-radius: 40px;")
 
-
 # ==========================================
 # サブウインドウUI
 # ==========================================
@@ -225,13 +231,14 @@ class SubWindowUI(QWidget):
         self.setStyleSheet("background-color: #EEEEEE;")
         self.setWindowModality(Qt.ApplicationModal)
 
-
         # --- speed変更エリア ------------------------------
         # 配置座標
-        up_speed_x = SUB_WINDOW_W - ICON_UP_SPEED_SIZE_W - 250
-        up_speed_y = 20  # 上からの余白
-        down_speed_x = SUB_WINDOW_W - ICON_DOWN_SPEED_SIZE_W - 250
-        down_speed_y = SUB_WINDOW_H - ICON_DOWN_SPEED_SIZE_H - 20  # 下からの余白
+        up_speed_x = MARGIN_X * 5
+        up_speed_y = MARGIN_Y * 3  # 上からの余白
+        speed_label_x = MARGIN_X * 5
+        speed_label_y = ICON_UP_SPEED_SIZE_H + MARGIN_Y * 3
+        down_speed_x = MARGIN_X * 5
+        down_speed_y = SUB_WINDOW_H - ICON_DOWN_SPEED_SIZE_H - MARGIN_Y * 3  # 下からの余白
 
         # up_speedボタン
         pixmap = QPixmap(resource_path("up_speed.png"))
@@ -241,22 +248,27 @@ class SubWindowUI(QWidget):
         self.button_up_speed.setCursor(Qt.PointingHandCursor)        # マウスを乗せたときに指カーソルにする
         resize_smooth_image(pixmap, self.button_up_speed)
 
+        # 現在の速度数値を表示するラベル
+        self.label_current_speed = QLabel("5", self) # 初期値5
+        self.label_current_speed.setFixedSize(LABEL_SPEED_SIZE_W, LABEL_SPEED_SIZE_H)
+        self.label_current_speed.setStyleSheet(LABEL_SPEED_STYLE)
+        self.label_current_speed.move(speed_label_x, speed_label_y)
+
         # down_speedボタン
         pixmap = QPixmap(resource_path("down_speed.png"))
         self.button_down_speed = ClickableLabel(self)
         self.button_down_speed.setFixedSize(ICON_DOWN_SPEED_SIZE_W, ICON_DOWN_SPEED_SIZE_H)
         self.button_down_speed.move(down_speed_x, down_speed_y)
-        self.button_up_speed.setCursor(Qt.PointingHandCursor)
+        self.button_down_speed.setCursor(Qt.PointingHandCursor)
         resize_smooth_image(pixmap, self.button_down_speed)
-
 
         # --- 戻るボタンエリア ------------------------------
         # 配置座標
-        back_x = SUB_WINDOW_W - 150
-        back_y = SUB_WINDOW_H - 150
+        back_x = SUB_WINDOW_W - BUTTON_BACK_SIZE - MARGIN_X * 3
+        back_y = SUB_WINDOW_H - BUTTON_BACK_SIZE - MARGIN_Y * 3
 
         self.button_back = QPushButton("Back", self)
-        self.button_back.setFixedSize(130, 130)
+        self.button_back.setFixedSize(BUTTON_BACK_SIZE, BUTTON_BACK_SIZE)
         self.button_back.setStyleSheet(BUTTON_SUB_STYLE)
         self.button_back.move(back_x, back_y)
         self.button_back.setCursor(Qt.PointingHandCursor)
@@ -272,13 +284,12 @@ class MainWindowUI(QMainWindow):
         self.setFixedSize(WINDOW_W, WINDOW_H)
         self.setStyleSheet("background-color: #FFFFFF;")
 
-
         # --- カメラ管理エリア ------------------------------
         # 配置座標
         cam_x_left = MARGIN_X
-        cam_x_right = MARGIN_X * 2 + VIEW_CAM_SIZE_W
+        cam_x_right = VIEW_CAM_SIZE_W + MARGIN_X * 2
         cam_y_upper = MARGIN_Y
-        cam_y_lower = MARGIN_Y * 2 + VIEW_CAM_SIZE_H
+        cam_y_lower = VIEW_CAM_SIZE_H + MARGIN_Y * 2
 
         self.cam_in = QLabel("camera_inside", self)
         self.cam_in.setFixedSize(VIEW_CAM_SIZE_W, VIEW_CAM_SIZE_H); self.cam_in.setStyleSheet(LABEL_CAM_STYLE)
@@ -296,11 +307,10 @@ class MainWindowUI(QMainWindow):
         self.cam_top.setFixedSize(VIEW_CAM_SIZE_W, VIEW_CAM_SIZE_H); self.cam_top.setStyleSheet(LABEL_CAM_STYLE)
         self.cam_top.move(cam_x_right, cam_y_lower)
 
-
         # --- 設定エリア ------------------------------
         # 配置座標
-        setting_x = WINDOW_W - ICON_SETTING_SIZE - MARGIN_X * 2
-        setting_y = MARGIN_Y * 4
+        setting_x = BASE_X + MARGIN_X
+        setting_y = MARGIN_Y
 
         pixmap = QPixmap(resource_path("setting.png"))
         self.button_setting = ClickableLabel(self)
@@ -309,11 +319,10 @@ class MainWindowUI(QMainWindow):
         self.button_setting.setCursor(Qt.PointingHandCursor)    # マウスを乗せたときに指カーソルにする
         resize_smooth_image(pixmap, self.button_setting)
 
-
         # --- 電源エリア ------------------------------
         # 配置座標
-        power_x = WINDOW_W - ICON_POWER_SIZE - MARGIN_X * 2
-        power_y = MARGIN_Y * 8 + ICON_POWER_SIZE
+        power_x = WINDOW_W - ICON_POWER_SIZE - MARGIN_X
+        power_y = MARGIN_Y
 
         pixmap = QPixmap(resource_path("power_supply.png"))
         self.button_power = ClickableLabel(self)
@@ -322,10 +331,19 @@ class MainWindowUI(QMainWindow):
         self.button_power.setCursor(Qt.PointingHandCursor)
         resize_smooth_image(pixmap, self.button_power)
 
+        # --- 判定履歴表示エリア ------------------------------
+        # 配置座標
+        history_x = BASE_X + MARGIN_X
+        history_y = ICON_SETTING_SIZE + MARGIN_Y * 2
+
+        self.label_history = QLabel("Wait for input...", self)
+        self.label_history.setFixedSize(LABEL_HISTORY_SIZE_W, LABEL_HISTORY_SIZE_H)
+        self.label_history.setStyleSheet(LABEL_HISTORY_STYLE)
+        self.label_history.move(history_x, history_y)
 
         # --- 病害管理エリア ------------------------------
         # 配置座標
-        dam_x = WINDOW_W - LABEL_DAM_SIZE_W - MARGIN_X * 2
+        dam_x = WINDOW_W - LABEL_DAM_SIZE_W - MARGIN_X
         dam_y = BASE_Y
 
         # 病害名表示ラベル
@@ -333,16 +351,12 @@ class MainWindowUI(QMainWindow):
         self.label_dam.setFixedSize(LABEL_DAM_SIZE_W, LABEL_DAM_SIZE_H)
         self.label_dam.setStyleSheet(LABEL_DAM_STYLE)
         self.label_dam.move(dam_x, dam_y)
-        print("BASE_X:", BASE_X)
-        print("dam_x:", dam_x)
-        print("VIEW_CAM_SIZE_W:", VIEW_CAM_SIZE_W)
-        print("VIEW_CAM_SIZE_H:", VIEW_CAM_SIZE_H)
 
         # --- システム管理エリア ------------------------------
         # 配置座標
-        label_management_x = WINDOW_W - LABEL_MANAGEMENT_SIZE_W - MARGIN_X * 2
+        label_management_x = WINDOW_W - LABEL_MANAGEMENT_SIZE_W - MARGIN_X
         label_management_y = dam_y + LABEL_DAM_SIZE_H + MARGIN_Y * 3
-        toggle_switch_x = WINDOW_W - SWITCH_TOGGLE_SIZE_W - MARGIN_X * 7
+        toggle_switch_x = label_management_x + MARGIN_X * 5
         toggle_switch_y = label_management_y + LABEL_MANAGEMENT_SIZE_H + MARGIN_Y
         toggle_status_x = toggle_switch_x
         toggle_status_y = toggle_switch_y + SWITCH_TOGGLE_SIZE_H + MARGIN_Y

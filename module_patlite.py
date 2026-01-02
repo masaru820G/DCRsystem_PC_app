@@ -17,13 +17,13 @@ class LedPattern():
     構成: (Byte5の16進数値, デバッグ用表示名)
     """
     OFF    = (0x00, "消灯")
-    RED    = (0x11, "赤 点灯")
-    GREEN  = (0x21, "緑 点灯")
-    YELLOW = (0x31, "黄 点灯")
-    BLUE   = (0x41, "青 点灯")
-    VIOLET = (0x51, "紫 点灯")
-    SKY    = (0x61, "空 点灯")
-    WHITE  = (0x71, "白 点灯")
+    RED    = (0x11, "赤")
+    GREEN  = (0x21, "緑")
+    YELLOW = (0x31, "黄")
+    BLUE   = (0x41, "青")
+    VIOLET = (0x51, "紫")
+    SKY    = (0x61, "空")
+    WHITE  = (0x71, "白")
 # ================================================
 # 内部関数
 # ================================================
@@ -86,9 +86,9 @@ def set_patlite_color(pattern = LedPattern.OFF):
     data[7] = 0x00
     data[8] = 0x00
 
-    print(f"パトライト制御: {color_name} (Byte5: {hex(led_byte)})")
+    #print(f"パトライト制御: {color_name}")
 
-    return _send_command(data)
+    return _send_command(data), color_name
 
 def close_patlite():
     """
@@ -100,43 +100,3 @@ def close_patlite():
         device.close()
         device = None
         print(">>> パトライト切断完了")
-# ==========================================
-# 動作確認用メイン
-# ==========================================
-if __name__ == "__main__":
-    if init_patlite():
-        try:
-            # 緑 (正常)
-            set_patlite_color(LedPattern.GREEN)
-            time.sleep(1)
-
-            # 黄 (警告)
-            set_patlite_color(LedPattern.YELLOW)
-            time.sleep(1)
-
-            # 赤 (異常)
-            set_patlite_color(LedPattern.RED)
-            time.sleep(1)
-
-            # 消灯
-            set_patlite_color(LedPattern.OFF)
-            time.sleep(1)
-
-            # 青 (正常)
-            set_patlite_color(LedPattern.BLUE)
-            time.sleep(1)
-
-            # 紫 (正常)
-            set_patlite_color(LedPattern.VIOLET)
-            time.sleep(1)
-
-            # 空 (正常)
-            set_patlite_color(LedPattern.SKY)
-            time.sleep(1)
-
-            # 白 (正常)
-            set_patlite_color(LedPattern.WHITE)
-            time.sleep(1)
-
-        finally:
-            close_patlite()
