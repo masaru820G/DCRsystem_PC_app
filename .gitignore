@@ -8,8 +8,12 @@ wheels/
 
 # Virtual environments
 .venv
-main_nokeyevent.py
-main2.py
 # requirements files
 
+# Folder
+unused_file
+sample_move_check
+
 # Python files
+main_nokeyevent.py
+main2.py
