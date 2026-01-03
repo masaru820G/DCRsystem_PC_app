@@ -11,8 +11,8 @@ wheels/
 # requirements files
 
 # Folder
-unused_file
-sample_move_check
+unused_file/
+sample_move_check/
 
 # Python files
 main_nokeyevent.py
