@@ -8,6 +8,11 @@ from enum import IntEnum
 # ================================================
 # 定数・設定定義
 # ================================================
+YDCI_RESULT_SUCCESS = 0     # 正常終了
+YDCI_OPEN_NORMAL = 0        # YdciOpen
+RELAY_OPEN_TIME = 0.2       # リレーの開閉時間（秒）
+RATIO = 1.0                 # 基本補正係数
+MICRO_STATUS = 1/32         # マイクロステップ設定
 class RelayState(IntEnum):
     """リレーの状態定義"""
     OPEN = 0   # 回路を開く
@@ -17,28 +22,18 @@ class RelayChannel(IntEnum):
     REMOVE = 0    # 被害果除去用
     TRANSPORT = 1 # 健全果運搬用
 
-YDCI_RESULT_SUCCESS = 0     # 正常終了
-YDCI_OPEN_NORMAL = 0        # YdciOpen
-RELAY_OPEN_TIME = 0.2       # リレーの開閉時間（秒）
-RATIO = 1.0                 # 基本補正係数
-MICRO_STATUS = 1/32         # マイクロステップ設定
 # ================================================
-# クラス定義
+# メインクラス定義
 # ================================================
-class RelayController:
+class RelayController():
     def __init__(self):
         """コンストラクタ: 変数の初期化"""
         self.ydci = None
         self.board_id = ctypes.c_ushort()
         self.is_connected = False
 
-
     # --- リレーボード初期化 + 接続関数 -------------------
-    def connect(self):
-        """
-        Returns:
-            bool: 初期化が成功した場合は True、失敗した場合は False
-        """
+    def init(self):
         # DLLのロード
         pf = platform.system()
         if pf == 'Windows':
@@ -50,27 +45,23 @@ class RelayController:
         else:
             print(f"サポートされていないOSです: {pf}")
             return False
+
         # ボード識別スイッチが0のボードをオープン
         result_board = self.ydci.YdciOpen(self.board_id, b'RLY-P4/2/0B-UBT', ctypes.byref(self.board_id), YDCI_OPEN_NORMAL)
         if result_board != YDCI_RESULT_SUCCESS:
             print(f'オープンできません。エラーコード: {result_board}')
             self.ydci = None
             return False
-        print(f"リレーボードが正常にオープンしました。Board ID: {self.board_id.value}")
+        print(f">>> リレーボード({self.board_id.value})接続成功")
+
         # 初期状態設定:
         self._set_state(RelayChannel.REMOVE, RelayState.CLOSE)       # 被害果除去用Ch（0）をClose
         self._set_state(RelayChannel.TRANSPORT, RelayState.CLOSE)    # 健全果運搬用Ch（1）をClose
-        print("リレー初期状態: 除去エアー CLOSE, 運搬エアー CLOSE")
         return True
-
 
     # --- リレーの状態を設定する関数 -------------------
     def _set_state(self, channel, state):
         """
-        Args:
-            channel (int): Ch番号 (0 or 1), state (int): 状態 (0: Open, 1: Close)
-        Returns:
-            bool: 成功した場合は True、失敗した場合は False
         [ydci.YdciRlyOutput()]
         board_id -> リレー制御ボードを識別するための変数。ctypes.c_ushort 型で定義し、YdciRlyOpen が正常に実行されると、この変数にボードIDが格納されます。
         ctypes.byref(output_data) -> relay_ON(0),relay_OFF(1)
@@ -87,34 +78,30 @@ class RelayController:
             return False
         return True
 
-    # --- 指定したChのリレーを遅延時間後に動作させる関数 -------------------
+    # --- 指定したChのリレーをn秒後に動作させる関数 -------------------
     def pulse(self, channel, delay):
-        """
-        Args:
-            channel (RelayChannel): 操作するチャンネル
-            delay (float): 遅延時間係数
-        """
         if not self.is_connected:
             print("警告: ボード未接続のためパルス動作をスキップします。")
             return
+
         # 計算ロジック
         t = delay * 2
         cnt = RATIO * (360 / 1.8) * MICRO_STATUS
         sec = t * cnt
-        duration_sec = 0.0
+
         if channel == RelayChannel.REMOVE:
-            duration_sec = sec * (90 / 360)
+            wait_sec = sec * (90 / 360)
         elif channel == RelayChannel.TRANSPORT:
-            duration_sec = sec * (135 / 360)
+            wait_sec = sec * (135 / 360)
         else:
             print(f"不明なチャンネル: {channel}")
             return
-        # 動作シーケンス
-        time.sleep(duration_sec)                # 該当タイミングまで待機
-        self._set_state(channel, RelayState.OPEN)  # ON (開く)
-        time.sleep(RELAY_OPEN_TIME)             # 噴射時間待機
-        self._set_state(channel, RelayState.CLOSE) # OFF (閉じる)
 
+        # 動作シーケンス
+        time.sleep(wait_sec)
+        self._set_state(channel, RelayState.OPEN)
+        time.sleep(RELAY_OPEN_TIME) # 噴射時間
+        self._set_state(channel, RelayState.CLOSE)
 
     # --- リレー停止関数 -------------------
     def stop(self):
@@ -124,11 +111,9 @@ class RelayController:
         self._set_state(RelayChannel.REMOVE, RelayState.CLOSE)
         self._set_state(RelayChannel.TRANSPORT, RelayState.CLOSE)
 
-
     # --- リレーボード接続終了関数 -------------------
     def close(self):
         if self.ydci is not None and self.is_connected:
-            print("リレーボードをCLOSEします。")
             # 安全のため終了前に閉じる
             self._set_state(RelayChannel.REMOVE, RelayState.CLOSE)
             self._set_state(RelayChannel.TRANSPORT, RelayState.CLOSE)
@@ -136,10 +121,8 @@ class RelayController:
             self.ydci.YdciClose(self.board_id)
             self.ydci = None
             self.is_connected = False
-            # IDリセット
-            self.board_id = ctypes.c_ushort()
+            print(">>> リレーボード切断完了")
 
-
-    # --- デストラクタ: インスタンス破棄時に自動的に閉じる関数 -------------------
+    # --- インスタンス破棄時に自動的に閉じる関数 -------------------
     def __del__(self):
         self.close()

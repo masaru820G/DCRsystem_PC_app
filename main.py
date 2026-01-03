@@ -16,7 +16,8 @@ import module_gui
 
 # 制御モジュール
 import module_patlite as p_ctr
-# import module_relay as r_ctr
+import module_relay as r_ctr
+import module_cap_video as cam_ctr
 
 RPI_IP_ADDRESS = "192.168.2.2"
 RPI_PORT = 5000
@@ -50,19 +51,80 @@ class StartupWindow(module_gui.StartupWindowUI):
         self.close()
 
 # ==========================================================
+# サブウィンドウ
+# ==========================================================
+class SubWindow(module_gui.SubWindowUI):
+    # --- 戻るボタン押下イベント -------------------
+    def __init__(self, parent_window, initial_speed):
+        super().__init__()
+        self.button_up_speed.clicked.connect(self.on_up_speed)
+        self.button_down_speed.clicked.connect(self.on_down_speed)
+        self.button_back.clicked.connect(self.go_back)
+
+        self.parent_window = parent_window
+        # スピード値の管理と初期化
+        self.current_speed = initial_speed  # 親ウィンドウから現在の速度を受け取る変数
+        self.update_speed_ui()  # 画面更新
+
+    # --- 画面の表示とボタンの状態を更新する関数 ---
+    def update_speed_ui(self):
+        self.label_current_speed.setText(str(self.current_speed))   # ラベルの数字を更新
+
+        # 上限チェック (10になったらUpボタンをロック)
+        if self.current_speed >= 10:
+            self.button_up_speed.set_locked(True)   # ロック＆半透明
+        else:
+            self.button_up_speed.set_locked(False)  # 解除
+
+        # 下限チェック (1になったらDownボタンをロック)
+        if self.current_speed <= 1:
+            self.button_down_speed.set_locked(True) # ロック＆半透明
+        else:
+            self.button_down_speed.set_locked(False)# 解除
+
+    # --- speed upボタン押下イベント -------------------
+    @Slot()
+    def on_up_speed(self):
+        if self.current_speed < 10:
+            self.current_speed += 1
+            self.update_speed_ui()
+
+    # --- speed downボタン押下イベント -------------------
+    @Slot()
+    def on_down_speed(self):
+        if self.current_speed > 1:
+            self.current_speed -= 1
+            self.update_speed_ui()
+
+    # --- 戻るボタン押下イベント -------------------
+    @Slot()
+    def go_back(self):
+        self.parent_window.saved_speed = self.current_speed        # メインウインドウにスピード設定値を渡す
+        self.close()
+
+# ==========================================================
 # メインウィンドウ
 # ==========================================================
 class MainWindow(module_gui.MainWindowUI):
     def __init__(self):
         super().__init__()
-        # スレッド管理プールの作成
-        self.thread_pool = QThreadPool()
-        print(f"Multithreading initialized. Max threads: {self.thread_pool.maxThreadCount()}")
-        # トグルスイッチの接続 ---
+        self.thread_pool = QThreadPool()    # スレッド管理プールの作成
+
+        self.patlite = p_ctr.PatliteController()
+        if not self.patlite.init():
+            print("パトライトの接続に失敗しました")
+            self.close()
+        #self.relay = r_ctr.RelayController()
+        #if not self.relay.init():
+        #    print("リレーボードの接続に失敗しました")
+        #    self.close()
+        #self.camera = cam_ctr.CameraController()
+        #if not self.camera.init():
+        #    print("カメラの接続に失敗しました")
+        #    self.close()
+
         self.toggle_switch.toggled.connect(self.on_main_toggled)
-        # 設定ボタンの接続
         self.button_setting.clicked.connect(self.on_setting_button)
-        # 電源ボタンの接続
         self.button_power.clicked.connect(self.on_power_bottom)
 
         self.saved_speed = 5        # 速度設定値を記憶しておく変数 初期値5
@@ -70,15 +132,9 @@ class MainWindow(module_gui.MainWindowUI):
         # 履歴管理用の変数
         self.history_data = []  # 履歴データリスト [(id, result, conf), ...]
         self.current_id = 1     # IDカウンタ
-        # 初期表示の更新
-        #self.update_history_display()
 
-    # --- バックグラウンドで関数を実行するヘルパー関数 ---
+    # --- バックグラウンドで渡された関数を実行するヘルパー関数 ---
     def run_in_background(self, func, *args, **kwargs):
-        """
-        渡された関数をスレッドプールで実行します。
-        例: self.run_in_background(p_ctr.set_patlite_color, "RED")
-        """
         worker = TaskWorker(func, *args, **kwargs)
         self.thread_pool.start(worker)
 
@@ -101,9 +157,11 @@ class MainWindow(module_gui.MainWindowUI):
     # --- 電源ボタン押下イベント -------------------
     @Slot()
     def on_power_bottom(self):
-        print("電源ボタンが押されました。終了します。")
-        p_ctr.close_patlite()           # 画面を閉じる前に、PATLITEを閉じる
-        #r_ctr.close_relay()             # 画面を閉じる前に、リレーボードを閉じる
+        print("\n電源ボタンが押されました。終了します。")
+        self.patlite.close()
+        #r_ctr.RelayController.close()
+        #cam_ctr.CameraController.close()
+
         self.close()                    # アプリケーションを閉じる
 
     # --- 履歴表示を更新する関数 (HTMLテーブル版) -------------------
@@ -172,7 +230,7 @@ class MainWindow(module_gui.MainWindowUI):
         </body>
         </html>
         """
-        
+
         self.label_history.setText(full_html)
 
     # --- キー入力イベント ------------------------------------------
@@ -195,8 +253,7 @@ class MainWindow(module_gui.MainWindowUI):
                 border: 1px solid #000000;
                 qproperty-alignment: 'AlignCenter';
             """)
-            # もしここでも通信するなら: self.send_async("/detect_mold")
-            self.run_in_background(p_ctr.set_patlite_color, p_ctr.LedPattern.VIOLET)    # 非同期で実行
+            self.run_in_background(self.patlite.set_color, p_ctr.LedPattern.VIOLET)    # 非同期で実行
         elif event.key() == Qt.Key.Key_2:
             disease_name = "未熟果"
             pattern = p_ctr.LedPattern.YELLOW
@@ -207,8 +264,7 @@ class MainWindow(module_gui.MainWindowUI):
                 border: 1px solid #000000;
                 qproperty-alignment: 'AlignCenter';
             """)
-            # もしここでも通信するなら: self.send_async("/detect_unripe")
-            self.run_in_background(p_ctr.set_patlite_color, p_ctr.LedPattern.YELLOW)
+            self.run_in_background(self.patlite.set_color, p_ctr.LedPattern.YELLOW)
         elif event.key() == Qt.Key.Key_3:
             disease_name = "健全果"
             pattern = p_ctr.LedPattern.WHITE
@@ -229,13 +285,13 @@ class MainWindow(module_gui.MainWindowUI):
                 border: 1px solid #000000;
                 qproperty-alignment: 'AlignCenter';
             """)
-            # もしここでも通信するなら: self.send_async("/detect_unripe")
-            self.run_in_background(p_ctr.set_patlite_color, p_ctr.LedPattern.WHITE)
+            self.run_in_background(self.patlite.set_color, p_ctr.LedPattern.WHITE)
 
         # 判定処理が行われた場合のみ履歴更新
         if disease_name != "":
             # パトライト制御 (非同期)
-            self.run_in_background(p_ctr.set_patlite_color, pattern)
+            self.run_in_background(self.patlite.set_color, pattern)
+
             # 履歴データの追加処理
             confidence = random.randint(60, 95) # 信頼度ランダム (60~95)
             # 辞書として作成
@@ -244,8 +300,8 @@ class MainWindow(module_gui.MainWindowUI):
                 "result": disease_name,
                 "conf": confidence
             }
-            # リストに追加
-            self.history_data.append(record)
+            self.history_data.append(record)    # リスト追加
+
             # 古いものを削除
             if len(self.history_data) > 10:
                 self.history_data.pop(0)
@@ -269,7 +325,9 @@ class MainWindow(module_gui.MainWindowUI):
                 font-family: "Meiryo"; font-size: 30px; font-weight: bold;
                 color: #32CD32; qproperty-alignment: 'AlignCenter';
             """)
-            # 2. 裏でコマンド送信 (非同期)
+
+            #self.run_in_background(self.__async_raspi_request, f"/set_speed/{self.saved_speed}")
+            print(f"Speed settings saved to Main: {self.saved_speed}")
             #self.run_in_background(self.__async_raspi_request, "/rotate")
         else:
             self.label_toggle_status.setText("停止中")
@@ -280,69 +338,13 @@ class MainWindow(module_gui.MainWindowUI):
             # 2. 裏でコマンド送信 (非同期)
             #self.run_in_background(self.__async_raspi_request, "/stop")
             #self.run_in_background(r_ctr.stop)  # リレーボード停止
-
-# ==========================================================
-# サブウィンドウ
-# ==========================================================
-class SubWindow(module_gui.SubWindowUI):
-    # --- 戻るボタン押下イベント -------------------
-    def __init__(self, parent_window, initial_speed):
-        super().__init__()
-        self.button_up_speed.clicked.connect(self.on_up_speed)
-        self.button_down_speed.clicked.connect(self.on_down_speed)
-        self.parent_window = parent_window
-        self.button_back.clicked.connect(self.go_back)
-
-        # スピード値の管理と初期化
-        self.current_speed = initial_speed  # 親ウィンドウから現在の速度を受け取る変数
-        self.update_speed_ui()  # 画面更新
-
-    # --- 画面の表示とボタンの状態を更新する関数 ---
-    def update_speed_ui(self):
-        # 1. ラベルの数字を更新
-        self.label_current_speed.setText(str(self.current_speed))
-
-        # 2. 上限チェック (10になったらUpボタンをロック)
-        if self.current_speed >= 10:
-            self.button_up_speed.set_locked(True)   # ロック＆半透明
-        else:
-            self.button_up_speed.set_locked(False)  # 解除
-
-        # 3. 下限チェック (1になったらDownボタンをロック)
-        if self.current_speed <= 1:
-            self.button_down_speed.set_locked(True) # ロック＆半透明
-        else:
-            self.button_down_speed.set_locked(False)# 解除
-
-    # --- speed upボタン押下イベント -------------------
-    @Slot()
-    def on_up_speed(self):
-        if self.current_speed < 10:
-            self.current_speed += 1
-            self.parent_window.saved_speed = self.current_speed
-            print(f"Pushed Speed UP: {self.current_speed}")
-            self.update_speed_ui()
-
-    # --- speed downボタン押下イベント -------------------
-    @Slot()
-    def on_down_speed(self):
-        if self.current_speed > 1:
-            self.current_speed -= 1
-            self.parent_window.saved_speed = self.current_speed
-            print(f"Pushed Speed DOWN: {self.current_speed}")
-            self.update_speed_ui()
-
-    # --- 戻るボタン押下イベント -------------------
-    @Slot()
-    def go_back(self):
-        self.parent_window.showFullScreen()
-        self.close()
-
+            self.run_in_background(self.patlite.set_color, p_ctr.LedPattern.OFF)
 # ==========================================================
 # 実行ブロック
 # ==========================================================
 if __name__ == "__main__":
-    p_ctr.init_patlite()
+    #r_ctr.RelayController().init()
+    #cam_ctr.CameraController().init()
     app = QApplication(sys.argv)
     window = StartupWindow()
     window.show()
