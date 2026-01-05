@@ -28,7 +28,7 @@ class LedPattern():
 # ================================================
 class PatliteController():
     def __init__(self):
-        """コンストラクタ: 変数の初期化"""
+        # 変数の初期化
         self.device = None
 
     # --- パトライト初期化(hid device）) + 接続関数 -------------------

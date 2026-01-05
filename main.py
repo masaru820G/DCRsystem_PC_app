@@ -389,8 +389,6 @@ class MainWindow(module_gui.MainWindowUI):
 # 実行ブロック
 # ==========================================================
 if __name__ == "__main__":
-    #r_ctr.RelayController().init()
-    #cam_ctr.CameraController().init()
     app = QApplication(sys.argv)
     window = StartupWindow()
     window.show()
