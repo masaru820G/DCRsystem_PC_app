@@ -5,11 +5,12 @@ import sys
 import requests
 import time
 import random
+import cv2
 
 # QThreadPool, QRunnable を追加
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import Slot, Qt, QRunnable, QThreadPool
-from PySide6.QtGui import QKeyEvent
+from PySide6.QtCore import Slot, Qt, QRunnable, QThreadPool, QTimer
+from PySide6.QtGui import QKeyEvent, QImage, QPixmap
 
 # デザインファイルを読み込む
 import module_gui
@@ -17,7 +18,8 @@ import module_gui
 # 制御モジュール
 import module_patlite as p_ctr
 import module_relay as r_ctr
-import module_cap_video as cam_ctr
+import module_cameras as cam_ctr
+#import module_yolo_csv as yolo_ctr
 
 RPI_IP_ADDRESS = "192.168.2.2"
 RPI_PORT = 5000
@@ -110,19 +112,23 @@ class MainWindow(module_gui.MainWindowUI):
         super().__init__()
         self.thread_pool = QThreadPool()    # スレッド管理プールの作成
 
+        # 各デバイス接続処理
         self.patlite = p_ctr.PatliteController()
         if not self.patlite.init():
             print("パトライトの接続に失敗しました")
             self.close()
-        #self.relay = r_ctr.RelayController()
-        #if not self.relay.init():
-        #    print("リレーボードの接続に失敗しました")
-        #    self.close()
-        #self.camera = cam_ctr.CameraController()
-        #if not self.camera.init():
-        #    print("カメラの接続に失敗しました")
-        #    self.close()
+        self.relay = r_ctr.RelayController()
+        if not self.relay.init():
+            print("リレーボードの接続に失敗しました")
+            self.close()
+        self.cameras = cam_ctr.CameraManager()
+        if not self.cameras.init_cameras():
+            print("カメラの接続に失敗しました")
+            self.close()
 
+        self.cameras.start_all_get_frame() # 起動と同時にキャプチャ開始
+
+        # イベント接続
         self.toggle_switch.toggled.connect(self.on_main_toggled)
         self.button_setting.clicked.connect(self.on_setting_button)
         self.button_power.clicked.connect(self.on_power_bottom)
@@ -132,6 +138,44 @@ class MainWindow(module_gui.MainWindowUI):
         # 履歴管理用の変数
         self.history_data = []  # 履歴データリスト [(id, result, conf), ...]
         self.current_id = 1     # IDカウンタ
+
+        # 映像更新用タイマー設定
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update_video_feeds)
+        self.timer.start(50)  # 50msごとに更新 (約20fps)
+
+    # --- カメラ映像をGUIに反映する関数 ---
+    def update_video_feeds(self):
+        for controller in self.cameras.controllers:
+            frame = controller.get_current_frame()  # 最新フレームを取得 (BGR形式)
+
+            if frame is not None:
+                # OpenCV(BGR) -> Qt(RGB) 変換
+                rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                h, w, ch = rgb_image.shape
+                bytes_per_line = ch * w
+                qt_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format_RGB888)
+
+                # ラベルのサイズに合わせてリサイズ (アスペクト比保持)
+                # controller.name に応じて貼り付けるラベルを決める
+                target_label = None
+                if controller.name == "cam_inside":
+                    target_label = self.cam_in
+                elif controller.name == "cam_outside":
+                    target_label = self.cam_out
+                elif controller.name == "cam_under":
+                    target_label = self.cam_under
+                elif controller.name == "cam_top":
+                    target_label = self.cam_top
+
+                if target_label:
+                    pixmap = QPixmap.fromImage(qt_image)
+                    scaled_pixmap = pixmap.scaled(
+                        target_label.size(),
+                        Qt.KeepAspectRatio,
+                        Qt.SmoothTransformation
+                    )
+                    target_label.setPixmap(scaled_pixmap)
 
     # --- バックグラウンドで渡された関数を実行するヘルパー関数 ---
     def run_in_background(self, func, *args, **kwargs):
@@ -158,9 +202,12 @@ class MainWindow(module_gui.MainWindowUI):
     @Slot()
     def on_power_bottom(self):
         print("\n電源ボタンが押されました。終了します。")
+        self.timer.stop()
+
+        # デバイス停止処理
         self.patlite.close()
-        #r_ctr.RelayController.close()
-        #cam_ctr.CameraController.close()
+        #self.relay.close()
+        self.cameras.stop_all_get_frame() # カメラ停止
 
         self.close()                    # アプリケーションを閉じる
 
@@ -327,6 +374,7 @@ class MainWindow(module_gui.MainWindowUI):
             """)
 
             #self.run_in_background(self.__async_raspi_request, f"/set_speed/{self.saved_speed}")
+            #self.relay.set_wait_time(self.saved_speed)
             print(f"Speed settings saved to Main: {self.saved_speed}")
             #self.run_in_background(self.__async_raspi_request, "/rotate")
         else:
