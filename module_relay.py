@@ -5,6 +5,8 @@ import platform
 import ctypes
 import time
 from enum import IntEnum
+
+import module_yolo_csv as yolo_csv
 # ================================================
 # 定数・設定定義
 # ================================================
@@ -78,8 +80,8 @@ class RelayController():
             return False
         return True
 
-    # --- 指定したChのリレーをn秒後に動作させる関数 -------------------
-    def pulse(self, channel, delay):
+    # --- PCから受けとったspeed値から、上外カメラ撮影位置からの待機時間を計算し、セットする関数 -------------------
+    def set_wait_time(self, delay):
         if not self.is_connected:
             print("警告: ボード未接続のためパルス動作をスキップします。")
             return
@@ -89,16 +91,26 @@ class RelayController():
         cnt = RATIO * (360 / 1.8) * MICRO_STATUS
         sec = t * cnt
 
+        # チャンネルごとに待機時間を調整してセット
+        remove_channel_wait = sec * (90 / 360)
+        transport_channel_wait = sec * (135 / 360)
+
+        return remove_channel_wait, transport_channel_wait
+
+    # --- 指定したChのリレーを動作させる関数 -------------------
+    def pulse(self, channel, set_wait):
+        remove_wait_sec, transport_wait_sec = self.set_wait_time(set_wait)
+
         if channel == RelayChannel.REMOVE:
-            wait_sec = sec * (90 / 360)
+            wait_sec = remove_wait_sec
         elif channel == RelayChannel.TRANSPORT:
-            wait_sec = sec * (135 / 360)
+            wait_sec = transport_wait_sec
         else:
-            print(f"不明なチャンネル: {channel}")
+            print("エラー: 不正なチャンネルが指定されました。")
             return
 
         # 動作シーケンス
-        time.sleep(wait_sec)
+        time.sleep(wait_sec)  # 待機時間
         self._set_state(channel, RelayState.OPEN)
         time.sleep(RELAY_OPEN_TIME) # 噴射時間
         self._set_state(channel, RelayState.CLOSE)
