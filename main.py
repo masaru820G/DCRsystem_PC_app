@@ -3,11 +3,9 @@
 # -------------------------------------------------
 import sys
 import requests
-import time
 import random
 import cv2
 
-# QThreadPool, QRunnable を追加
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import Slot, Qt, QRunnable, QThreadPool, QTimer
 from PySide6.QtGui import QKeyEvent, QImage, QPixmap
