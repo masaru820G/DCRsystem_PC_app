@@ -6,7 +6,7 @@ import ctypes
 import time
 from enum import IntEnum
 
-import module_yolo_csv as yolo_csv
+#import module_yolo_csv as yolo_csv
 # ================================================
 # 定数・設定定義
 # ================================================

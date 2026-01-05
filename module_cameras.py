@@ -8,7 +8,7 @@ import cv2
 import threading
 from pypylon import pylon
 
-import module_yolo_csv as yolo
+#import module_yolo_csv as yolo
 
 # ==========================================================
 # 定数定義
