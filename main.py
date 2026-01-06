@@ -186,7 +186,6 @@ class MainWindow(module_gui.MainWindowUI):
         try:
             print(f" >> [Sending]: {url}")
             requests.get(url, timeout=2)
-            print(" << [Sent]")
         except Exception as e:
             print(f" !! [Net Error]: {e}")
 
@@ -199,13 +198,14 @@ class MainWindow(module_gui.MainWindowUI):
     # --- 電源ボタン押下イベント -------------------
     @Slot()
     def on_power_bottom(self):
-        print("\n電源ボタンが押されました。終了します。")
+        print("\n電源ボタンが押されました。終了します。\n")
         self.timer.stop()
 
         # デバイス停止処理
         self.patlite.close()
-        #self.relay.close()
+        self.relay.close()
         self.cameras.stop_all_get_frame() # カメラ停止
+        self.run_in_background(self.__async_raspi_request, "/cleanup_system")
 
         self.close()                    # アプリケーションを閉じる
 
@@ -291,6 +291,7 @@ class MainWindow(module_gui.MainWindowUI):
         if event.key() == Qt.Key.Key_1:
             disease_name = "カビ"
             pattern = p_ctr.LedPattern.VIOLET
+            channel = r_ctr.RelayChannel.REMOVE
             self.label_dam.setText("カビ")
             self.label_dam.setStyleSheet("""
                 font-family: "Meiryo"; font-size: 30px; font-weight: bold;
@@ -298,10 +299,10 @@ class MainWindow(module_gui.MainWindowUI):
                 border: 1px solid #000000;
                 qproperty-alignment: 'AlignCenter';
             """)
-            self.run_in_background(self.patlite.set_color, p_ctr.LedPattern.VIOLET)    # 非同期で実行
         elif event.key() == Qt.Key.Key_2:
             disease_name = "未熟果"
             pattern = p_ctr.LedPattern.YELLOW
+            channel = r_ctr.RelayChannel.REMOVE
             self.label_dam.setText("未熟果")
             self.label_dam.setStyleSheet("""
                 font-family: "Meiryo"; font-size: 30px; font-weight: bold;
@@ -309,10 +310,10 @@ class MainWindow(module_gui.MainWindowUI):
                 border: 1px solid #000000;
                 qproperty-alignment: 'AlignCenter';
             """)
-            self.run_in_background(self.patlite.set_color, p_ctr.LedPattern.YELLOW)
         elif event.key() == Qt.Key.Key_3:
             disease_name = "健全果"
             pattern = p_ctr.LedPattern.WHITE
+            channel = r_ctr.RelayChannel.TRANSPORT
             self.label_dam.setText("健全果")
             self.label_dam.setStyleSheet("""
                 font-family: "Meiryo"; font-size: 30px; font-weight: bold;
@@ -323,6 +324,7 @@ class MainWindow(module_gui.MainWindowUI):
         elif event.key() == Qt.Key.Key_4:
             disease_name = "果梗裂果"
             pattern = p_ctr.LedPattern.BLUE
+            channel = r_ctr.RelayChannel.REMOVE
             self.label_dam.setText("果梗裂果")
             self.label_dam.setStyleSheet("""
                 font-family: "Meiryo"; font-size: 30px; font-weight: bold;
@@ -330,12 +332,12 @@ class MainWindow(module_gui.MainWindowUI):
                 border: 1px solid #000000;
                 qproperty-alignment: 'AlignCenter';
             """)
-            self.run_in_background(self.patlite.set_color, p_ctr.LedPattern.WHITE)
 
         # 判定処理が行われた場合のみ履歴更新
         if disease_name != "":
-            # パトライト制御 (非同期)
+            # デバイス制御 (非同期)
             self.run_in_background(self.patlite.set_color, pattern)
+            self.run_in_background(self.relay.move, channel, self.saved_speed)
 
             # 履歴データの追加処理
             confidence = random.randint(60, 95) # 信頼度ランダム (60~95)
@@ -371,10 +373,9 @@ class MainWindow(module_gui.MainWindowUI):
                 color: #32CD32; qproperty-alignment: 'AlignCenter';
             """)
 
-            #self.run_in_background(self.__async_raspi_request, f"/set_speed/{self.saved_speed}")
-            #self.relay.set_wait_time(self.saved_speed)
-            print(f"Speed settings saved to Main: {self.saved_speed}")
-            #self.run_in_background(self.__async_raspi_request, "/rotate")
+            self.run_in_background(self.__async_raspi_request, f"/set_speed/{self.saved_speed}")
+            print(f"\nSpeed settings saved to Main: {self.saved_speed}")
+            self.run_in_background(self.__async_raspi_request, "/rotate")
         else:
             self.label_toggle_status.setText("停止中")
             self.label_toggle_status.setStyleSheet("""
@@ -382,8 +383,8 @@ class MainWindow(module_gui.MainWindowUI):
                 color: #888888; qproperty-alignment: 'AlignCenter';
             """)
             # 2. 裏でコマンド送信 (非同期)
-            #self.run_in_background(self.__async_raspi_request, "/stop")
-            #self.run_in_background(r_ctr.stop)  # リレーボード停止
+            self.run_in_background(self.__async_raspi_request, "/stop")
+            self.run_in_background(self.relay.stop)  # リレーボード停止
             self.run_in_background(self.patlite.set_color, p_ctr.LedPattern.OFF)
 # ==========================================================
 # 実行ブロック

@@ -14,6 +14,8 @@ from PySide6.QtGui import QPainter, QColor, QBrush, QPixmap
 # ==========================================================
 WINDOW_W, WINDOW_H = 1280, 800          # 1920×1200 拡大/縮小 150%
 #WINDOW_W, WINDOW_H = 1280, 720          # 1920×1080 拡大/縮小 150%
+#WINDOW_W, WINDOW_H = 1706, 1066          # 2560×1600 拡大/縮小 150%
+
 SUB_WINDOW_W, SUB_WINDOW_H = 600, 500   # サブウインドウサイズ
 MARGIN_X = 10                           # 画面の余白x
 MARGIN_Y = 10                           # 画面の余白y
