@@ -11,6 +11,11 @@
 - "requests>=2.32.5"
 
 ## インストール
+```bash
+# ターミナルで以下を実行
+cd C:\Users\保存したい場所
+git clone https://github.com/masaru820G/DCRsystem_PC_app.git
+```
 初回実行時にクローンしたフォルダに移動し、以下コマンドをターミナルで実行
 ```bash
 uv run python first.py
