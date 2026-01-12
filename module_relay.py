@@ -14,7 +14,7 @@ YDCI_RESULT_SUCCESS = 0     # 正常終了
 YDCI_OPEN_NORMAL = 0        # YdciOpen
 RELAY_OPEN_TIME = 0.2       # リレーの開閉時間（秒）
 RATIO = 1.0                 # 基本補正係数
-MICRO_STATUS = 1/32         # マイクロステップ設定
+MICRO_STATUS = 32           # マイクロステップ設定
 class RelayState(IntEnum):
     """リレーの状態定義"""
     OPEN = 0   # 回路を開く
@@ -23,7 +23,20 @@ class RelayChannel(IntEnum):
     """チャンネル定義"""
     REMOVE = 0    # 被害果除去用
     TRANSPORT = 1 # 健全果運搬用
-
+class RelayDelay(IntEnum):
+    """speedごとのdelay値"""
+SPEED_MAP = {
+    1: 0.0010,  # 回転遅い
+    2: 0.0009,
+    3: 0.0008,
+    4: 0.0007,
+    5: 0.0006,  # 基準 (デフォルト)
+    6: 0.0005,
+    7: 0.0004,
+    8: 0.0003,
+    9: 0.0002,
+    10: 0.0001  # 回転速い
+}
 # ================================================
 # メインクラス定義
 # ================================================
@@ -55,6 +68,7 @@ class RelayController():
             self.ydci = None
             return False
         print(f">>> リレーボード({self.board_id.value})接続成功")
+        self.is_connected = True
 
         # 初期状態設定:
         self._set_state(RelayChannel.REMOVE, RelayState.CLOSE)       # 被害果除去用Ch（0）をClose
@@ -80,26 +94,30 @@ class RelayController():
             return False
         return True
 
-    # --- PCから受けとったspeed値から、上外カメラ撮影位置からの待機時間を計算し、セットする関数 -------------------
-    def set_wait_time(self, delay):
+    # --- PCから受けとったspeed値から、上外カメラ撮影位置からの待機時間を計算し、セットする内部関数 -------------------
+    def _set_wait_time(self, speed):
         if not self.is_connected:
             print("警告: ボード未接続のためパルス動作をスキップします。")
             return
 
         # 計算ロジック
-        t = delay * 2
-        cnt = RATIO * (360 / 1.8) * MICRO_STATUS
-        sec = t * cnt
+        delay = SPEED_MAP[speed]
+        t_one_pulse = delay * 2
+        step_one_rotation = RATIO * (360 / 1.8) * MICRO_STATUS
+        sec = t_one_pulse * step_one_rotation * 2   # ギア比が2なので
 
         # チャンネルごとに待機時間を調整してセット
         remove_channel_wait = sec * (90 / 360)
         transport_channel_wait = sec * (135 / 360)
+        #print(delay)
+        #print(remove_channel_wait)
+        #print(transport_channel_wait)
 
         return remove_channel_wait, transport_channel_wait
 
     # --- 指定したChのリレーを動作させる関数 -------------------
-    def pulse(self, channel, set_wait):
-        remove_wait_sec, transport_wait_sec = self.set_wait_time(set_wait)
+    def move(self, channel, speed):
+        remove_wait_sec, transport_wait_sec = self._set_wait_time(speed)
 
         if channel == RelayChannel.REMOVE:
             wait_sec = remove_wait_sec
@@ -133,7 +151,7 @@ class RelayController():
             self.ydci.YdciClose(self.board_id)
             self.ydci = None
             self.is_connected = False
-            print(">>> リレーボード切断完了")
+        print(">>> リレーボード切断完了")
 
     # --- インスタンス破棄時に自動的に閉じる関数 -------------------
     def __del__(self):

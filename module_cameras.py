@@ -47,17 +47,17 @@ def setup_folders():
     try:
         if not os.path.exists(FOLDER_PARENT):
             os.makedirs(FOLDER_PARENT)
-            print(f"親フォルダ '{FOLDER_PARENT}' を作成しました。")
+            print(f"\n親フォルダ '{FOLDER_PARENT}' を作成しました。")
 
         paths = []
         for folder in FOLDER_CHILD:
             path = os.path.join(FOLDER_PARENT, folder)
             if not os.path.exists(path):
                 os.makedirs(path)
+                print(f"子フォルダ '{path}' を作成しました。")
             paths.append(path)
-            print(f"子フォルダ '{path}' を確認しました。")
 
-        print("フォルダ準備完了。")
+        print(">>> 保存フォルダ準備完了。\n")
         return paths
     except OSError as e:
         print(f"フォルダ作成エラー: {e}")
@@ -88,6 +88,25 @@ class CameraController:
             self.camera.Open()
             # 設定ファイルのロードが必要な場合はここで行う
             #pylon.FeaturePersistence.Load("path/to/settings.pfs", self.camera.GetNodeMap(), True)
+            # --- ここから追加 ---
+            # 1. 露出（明るさ）を自動にする
+            try:
+                self.camera.ExposureAuto.SetValue('Continuous')
+            except:
+                pass # 対応していないカメラ等の場合無視
+
+            # 2. ゲイン（感度）を自動にする
+            try:
+                self.camera.GainAuto.SetValue('Continuous')
+            except:
+                pass
+
+            # 3. ホワイトバランス（色味）を自動にする (カラーカメラの場合のみ)
+            try:
+                self.camera.BalanceWhiteAuto.SetValue('Continuous')
+            except:
+                pass
+            # --- ここまで ---
             return True
         except Exception as e:
             print(f"カメラ初期化エラー: {e}")
@@ -117,7 +136,7 @@ class CameraController:
         self.thread = threading.Thread(target=self._capture_loop)
         self.thread.daemon = True # メインプログラム終了時に強制終了できるようにする
         self.thread.start()
-        print(f"録画開始: {self.name}：{self.video_filename}\n")
+        print(f"録画開始: {self.name}：{self.video_filename}")
 
     # --- フレームキャプチャと保存のループ処理関数 -------------------
     def _capture_loop(self):
@@ -171,7 +190,7 @@ class CameraController:
 
         if self.video_writer:
             self.video_writer.release()
-            print(f"録画停止・保存完了: {self.video_filename}\n")
+            print(f"録画停止・保存完了: {self.video_filename}")
 
     # --- 現在のフレームを取得してGUIに表示する関数 -------------------
     def get_current_frame(self):
@@ -205,13 +224,13 @@ class CameraManager:
             devices = tlFactory.EnumerateDevices()
         except Exception as e:
             print(f"Pylon初期化エラー: {e}\n")
-            return
+            return False
 
         if not devices:
             print("エラー: カメラデバイスが見つかりません。\n")
-            return
+            return False
 
-        print("カメラをシリアルナンバーで検索中・・・\n")
+        print("カメラをシリアルナンバーで検索中・・・")
         for i, (target_serial, cam_name) in enumerate(TARGET_SERIALS):
             found_device_info = None
 
@@ -226,30 +245,31 @@ class CameraManager:
                 self.controllers.append(controller)
 
                 if controller.init_camera():
-                    print(f"(接続 + 初期化完了)シリアルナンバー{controller.device_info.GetSerialNumber()} -> {controller.save_path}\n")
-                    print(f"[接続完了]シリアルナンバー：{target_serial}, カメラ位置：{cam_name}\n")
+                    print(f"[ 接続完了 + 初期化完了 ]シリアルナンバー：{target_serial}, カメラ位置：{cam_name}")
                 else:
-                    print(f"エラー: シリアルナンバー {target_serial}, カメラ位置：{cam_name} のカメラの初期化に失敗しました。\n")
+                    print(f"エラー: シリアルナンバー {target_serial}, カメラ位置：{cam_name} のカメラの初期化に失敗しました。")
 
             else:
-                print(f"[接続不可] Serial：{target_serial}, カメラ位置：{cam_name}\n")
+                print(f"[接続不可] Serial：{target_serial}, カメラ位置：{cam_name}")
 
         if len(self.controllers) != len(TARGET_SERIALS):
-            print(f"警告: 予定台数 {len(TARGET_SERIALS)} に対し、接続成功は {len(self.controllers)} 台です。\n")
+            print(f"警告: 予定台数 {len(TARGET_SERIALS)} に対し、接続成功は {len(self.controllers)} 台です。")
+            return False
         else:
-            print(f"全 {len(self.controllers)} 台のカメラ準備完了。\n")
+            print(f">>> 全 {len(self.controllers)} 台のカメラ準備完了。\n")
+            return True
 
     # --- 全てのカメラのフレーム取得を開始する関数 -------------------
     def start_all_get_frame(self):
         if not self.controllers:
             print("有効なカメラがありません。\n")
             return
+        print("---- 全カメラ録画開始 ----")
         for controller in self.controllers:
             controller.start_recording()
-        print("--- 全カメラ録画開始 ---\n")
 
     # --- 全てのカメラのフレーム取得を停止する関数 -------------------
     def stop_all_get_frame(self):
+        print("---- 全カメラ録画停止完了 ----")
         for controller in self.controllers:
             controller.close()
-        print("--- 全カメラ録画停止完了 ---\n")
