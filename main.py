@@ -1,5 +1,5 @@
 # -------------------------------------------------
-# main.py : 動作ロジック記述ファイル (完全非同期・スレッド分離版)
+# main.py
 # -------------------------------------------------
 import sys
 import requests
@@ -115,10 +115,10 @@ class MainWindow(module_gui.MainWindowUI):
         if not self.patlite.init():
             print("パトライトの接続に失敗しました")
             self.close()
-        self.relay = r_ctr.RelayController()
-        if not self.relay.init():
-            print("リレーボードの接続に失敗しました")
-            self.close()
+        #self.relay = r_ctr.RelayController()
+        #if not self.relay.init():
+        #    print("リレーボードの接続に失敗しました")
+        #    self.close()
         self.cameras = cam_ctr.CameraManager()
         if not self.cameras.init_cameras():
             print("カメラの接続に失敗しました")
