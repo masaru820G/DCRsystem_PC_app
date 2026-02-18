@@ -24,8 +24,7 @@ class RelayChannel(IntEnum):
     """チャンネル定義"""
     REMOVE = 0    # 被害果除去用
     TRANSPORT = 1 # 健全果運搬用
-class RelayDelay(IntEnum):
-    """speedごとのdelay値"""
+
 SPEED_MAP = {
     1: 0.0010,  # 回転遅い
     2: 0.0009,
