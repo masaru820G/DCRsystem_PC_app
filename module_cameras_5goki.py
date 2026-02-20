@@ -5,6 +5,8 @@ import cv2
 import threading
 import re
 from pypylon import pylon
+from collections import deque  # 追加: フレームバッファ用
+
 
 # ==========================================================
 # 定数定義
@@ -26,7 +28,7 @@ FOLDER_CHILD = [
 
 VIDEO_CODEC = 'mp4v'
 VIDEO_EXIT = '.mp4'
-FPS = 20.0
+FPS = 40.0
 
 def setup_folders():
     try:
@@ -114,12 +116,16 @@ class CameraController:
         self.latest_frame = None
         self.lock = threading.Lock()
         
+        # 表示同期用の設定
+        self.delay_seconds = 0.0  # 遅延秒数
+        self.frame_queue = deque()
+
         # Pylon Viewerと同じ色再現を行うためのコンバーター
         self.converter = pylon.ImageFormatConverter()
         self.converter.OutputPixelFormat = pylon.PixelType_BGR8packed
         self.converter.OutputBitAlignment = pylon.OutputBitAlignment_MsbAligned
         
-        self.width = 1280 
+        self.width = 1280
         self.height = 960
 
     def init_camera(self):
@@ -132,7 +138,7 @@ class CameraController:
                 load_pfs_custom(self.camera, self.settings_file)
                 print(f"  [Load Success] {self.name}: 設定を精密に適用しました")
             
-            # 設定後の解像度を取得 
+            # 設定後の解像度を取得
             self.width = self.camera.Width.Value
             self.height = self.camera.Height.Value
             print(f"  [Info] {self.name} Resolution: {self.width}x{self.height}")
@@ -145,7 +151,7 @@ class CameraController:
     def start_recording(self):
         if not self.camera or not self.camera.IsOpen():
             return
-
+        
         folder_name = os.path.basename(self.save_path)
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         fourcc = cv2.VideoWriter_fourcc(*VIDEO_CODEC)
@@ -165,12 +171,25 @@ class CameraController:
             try:
                 grab_result = self.camera.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
                 if grab_result.GrabSucceeded():
-                    # --- Viewerと同じアルゴリズムで色変換 ---
                     converted = self.converter.Convert(grab_result)
                     frame_bgr = converted.GetArray()
 
+                    if self.video_writer:
+                        self.video_writer.write(frame_bgr)
+
+                    # --- 秒数からフレーム数を計算して遅延実行 ---
                     with self.lock:
-                        self.latest_frame = frame_bgr.copy()
+                        delay_frames = int(self.delay_seconds * FPS)
+                        
+                        if delay_frames > 0:
+                            self.frame_queue.append(frame_bgr.copy())
+                            if len(self.frame_queue) > delay_frames:
+                                self.latest_frame = self.frame_queue.popleft()
+                            else:
+                                self.latest_frame = None
+                        else:
+                            self.latest_frame = frame_bgr.copy()
+                            self.frame_queue.clear() # 遅延0ならキューを空にする
 
                     self.video_writer.write(frame_bgr)
                 

@@ -124,6 +124,14 @@ class MainWindow(module_gui.MainWindowUI):
             print("カメラの接続に失敗しました")
             self.close()
 
+        # --- 表示同期の設定 ---
+        DELAY_TIME_SEC = 2.5
+
+        for controller in self.cameras.controllers:
+            # 先に映る下流側のカメラ（under, inside）に遅延を設定
+            if controller.name in ["cam_under", "cam_inside"]:
+                controller.delay_seconds = DELAY_TIME_SEC
+                print(f"  [Sync] {controller.name} に {DELAY_TIME_SEC} 秒の表示遅延を設定しました")
         self.cameras.start_all_get_frame() # 起動と同時にキャプチャ開始
 
         # イベント接続
