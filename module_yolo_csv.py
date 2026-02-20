@@ -9,7 +9,7 @@ import cv2
 from ultralytics import yolo
 
 # 制御モジュール
-import module_cameras as cam_ctr
+import module_cameras_5goki as cam_ctr
 import module_patlite as p_ctr
 import module_relay as r_ctr
 
