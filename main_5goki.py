@@ -19,7 +19,7 @@ import module_relay as r_ctr
 import module_cameras_5goki as cam_ctr
 #import module_yolo_csv as yolo_ctr
 
-RPI_IP_ADDRESS = "192.168.2.2"
+RPI_IP_ADDRESS = "192.168.2.1"
 RPI_PORT = 5000
 
 # ==========================================================

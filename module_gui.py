@@ -12,39 +12,40 @@ from PySide6.QtGui import QPainter, QColor, QBrush, QPixmap
 # ==========================================================
 # 定数定義
 # ==========================================================
-WINDOW_W, WINDOW_H = 1280, 800          # 1920×1200 拡大/縮小 150%
-#WINDOW_W, WINDOW_H = 1280, 720          # 1920×1080 拡大/縮小 150%
-#WINDOW_W, WINDOW_H = 1706, 1066          # 2560×1600 拡大/縮小 150%
-
-SUB_WINDOW_W, SUB_WINDOW_H = 600, 500   # サブウインドウサイズ
 MARGIN_X = 10                           # 画面の余白x
 MARGIN_Y = 10                           # 画面の余白y
 
 # --- メインウインドウゾーン ----------------------------
+#WINDOW_W, WINDOW_H = 1280, 800          # 1920×1200 拡大/縮小 150%
+#WINDOW_W, WINDOW_H = 1280, 720          # 1920×1080 拡大/縮小 150%
+WINDOW_W, WINDOW_H = 1706, 1066          # 2560×1600 拡大/縮小 150%
+
 VIEW_CAM_SIZE_W = int(WINDOW_W * 0.34) // 10 * 10     # カメラ表示サイズw (10の倍数に丸める)
 VIEW_CAM_SIZE_H = (WINDOW_H - MARGIN_Y * 3) / 2       # カメラ表示サイズh
 
-ICON_SETTING_SIZE = 100                     # 設定アイコンサイズ
-ICON_POWER_SIZE = 100                       # 電源アイコンサイズ
+ICON_SETTING_SIZE = int(WINDOW_W * 0.1) // 10 * 10    # 設定アイコンサイズ
+ICON_POWER_SIZE = int(WINDOW_W * 0.1) // 10 * 10      # 電源アイコンサイズ
 
-LABEL_HISTORY_SIZE_W = 380                  # 履歴ラベルの幅
-LABEL_HISTORY_SIZE_H = VIEW_CAM_SIZE_H - ICON_SETTING_SIZE - MARGIN_Y * 0.5     # 履歴ラベルの高さ
+LABEL_HISTORY_SIZE_W = int(WINDOW_W * 0.3) // 10 * 10                  # 履歴ラベルの幅
+LABEL_HISTORY_SIZE_H = int(WINDOW_H * 0.4) // 10 * 10     # 履歴ラベルの高さ
 
-LABEL_DAMAGE_SIZE_W = 380                      # 病害名表示ラベルサイズw
-LABEL_DAMAGE_SIZE_H = 100                      # 病害名表示ラベルサイズh
+LABEL_DAMAGE_SIZE_W = int(WINDOW_W * 0.3) // 10 * 10                      # 病害名表示ラベルサイズw
+LABEL_DAMAGE_SIZE_H = int(WINDOW_H * 0.1) // 10 * 10                      # 病害名表示ラベルサイズh
 
-LABEL_MANAGEMENT_SIZE_W = 380               # システム管理ラベルサイズw
-LABEL_MANAGEMENT_SIZE_H = 60                # システム管理ラベルサイズh
+LABEL_MANAGEMENT_SIZE_W = int(WINDOW_W * 0.2) // 10 * 10               # 「システム管理」ラベルサイズw
+LABEL_MANAGEMENT_SIZE_H = int(WINDOW_H * 0.1) // 10 * 10                # 「システム管理」ラベルサイズh
 
-SWITCH_TOGGLE_SIZE_W = 280                  # トグルスイッチサイズw
-SWITCH_TOGGLE_SIZE_H = 140                  # トグルスイッチサイズh
-LABEL_TOGGLE_SIZE_W = 280                   # トグルスイッチ状態表示ラベルサイズw
-LABEL_TOGGLE_SIZE_H = 40                    # トグルスイッチ状態表示ラベルサイズh
+SWITCH_TOGGLE_SIZE_W = int(WINDOW_W * 0.2) // 10 * 10                  # トグルスイッチサイズw
+SWITCH_TOGGLE_SIZE_H = SWITCH_TOGGLE_SIZE_W / 2                  # トグルスイッチサイズh
+LABEL_TOGGLE_SIZE_W = SWITCH_TOGGLE_SIZE_W                   # トグルスイッチ状態表示ラベルサイズw
+LABEL_TOGGLE_SIZE_H = LABEL_TOGGLE_SIZE_W / 7                    # トグルスイッチ状態表示ラベルサイズh
 
 BASE_X = (MARGIN_X + VIEW_CAM_SIZE_W) * 2   # システム管理エリア基準x
 BASE_Y = MARGIN_Y * 2 + VIEW_CAM_SIZE_H     # システム管理エリア基準y
 
 # --- サブウインドウゾーン ----------------------------
+SUB_WINDOW_W, SUB_WINDOW_H = 600, 500   # サブウインドウサイズ
+
 ICON_UP_SPEED_SIZE_W = 300                  # speedアップアイコンサイズw
 ICON_UP_SPEED_SIZE_H = 150                  # speedアップアイコンサイズh
 LABEL_SPEED_SIZE_W = 300                    # speedラベルサイズw
@@ -78,7 +79,7 @@ qproperty-alignment: 'AlignCenter';
 """
 LABEL_MANAGEMENT_STYLE = """
 font-family: "Meiryo"; font-size: 40px; font-weight: bold;
-color: #000000; background-color: #FFFFFF; border-radius: 5px;
+color: #000000; background-color: #FFFFFF;
 qproperty-alignment: 'AlignCenter';
 """
 LABEL_TOGGLE_STYLE = """
@@ -148,7 +149,7 @@ class ClickableLabel(QLabel):
         self.setGraphicsEffect(opacity_effect)
 
 # ==========================================
-# ToggleSwitch クラス (部品)
+# ToggleSwitch クラス
 # ==========================================
 class ToggleSwitch(QCheckBox):
     def __init__(self, parent=None, width=60, height=30):
@@ -334,8 +335,8 @@ class MainWindowUI(QMainWindow):
 
         # --- 判定履歴表示エリア ------------------------------
         # 配置座標
-        history_x = BASE_X + MARGIN_X
-        history_y = ICON_SETTING_SIZE + MARGIN_Y * 1.5
+        history_x = WINDOW_W - LABEL_HISTORY_SIZE_W - MARGIN_X
+        history_y = setting_y + ICON_SETTING_SIZE + MARGIN_Y
 
         self.label_history = QLabel("Wait for input...", self)
         self.label_history.setFixedSize(LABEL_HISTORY_SIZE_W, LABEL_HISTORY_SIZE_H)
@@ -345,7 +346,7 @@ class MainWindowUI(QMainWindow):
         # --- 病害管理エリア ------------------------------
         # 配置座標
         dam_x = WINDOW_W - LABEL_DAMAGE_SIZE_W - MARGIN_X
-        dam_y = BASE_Y
+        dam_y = history_y + LABEL_HISTORY_SIZE_H + MARGIN_Y
 
         # 病害名表示ラベル
         self.label_dam = QLabel("病害結果", self)
@@ -355,10 +356,10 @@ class MainWindowUI(QMainWindow):
 
         # --- システム管理エリア ------------------------------
         # 配置座標
-        label_management_x = WINDOW_W - LABEL_MANAGEMENT_SIZE_W - MARGIN_X
-        label_management_y = dam_y + LABEL_DAMAGE_SIZE_H + MARGIN_Y * 3
-        toggle_switch_x = label_management_x + MARGIN_X * 5
-        toggle_switch_y = label_management_y + LABEL_MANAGEMENT_SIZE_H + MARGIN_Y
+        label_management_x = (WINDOW_W * 0.95) - LABEL_MANAGEMENT_SIZE_W - MARGIN_X
+        label_management_y = dam_y + LABEL_DAMAGE_SIZE_H
+        toggle_switch_x = (WINDOW_W * 0.95) - LABEL_MANAGEMENT_SIZE_W - MARGIN_X
+        toggle_switch_y = label_management_y + LABEL_MANAGEMENT_SIZE_H
         toggle_status_x = toggle_switch_x
         toggle_status_y = toggle_switch_y + SWITCH_TOGGLE_SIZE_H + MARGIN_Y
 
