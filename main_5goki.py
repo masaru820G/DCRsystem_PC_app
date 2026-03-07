@@ -17,7 +17,7 @@ import module_gui
 import module_patlite as p_ctr
 import module_relay as r_ctr
 import module_cameras_5goki as cam_ctr
-#import module_yolo_csv as yolo_ctr
+import module_yolo_csv as yolo_ctr
 
 RPI_IP_ADDRESS = "192.168.2.1"
 RPI_PORT = 5000
@@ -124,6 +124,9 @@ class MainWindow(module_gui.MainWindowUI):
             print("カメラの接続に失敗しました")
             self.close()
 
+        # YOLO初期化・一度だけロード
+        self.detector = yolo_ctr.YoloDetector("C:/gamo/yolo_v1/runs/detect/train7/weights/best.pt")
+
         # --- 表示同期の設定 ---
         DELAY_TIME_SEC = 2.5
 
@@ -153,11 +156,14 @@ class MainWindow(module_gui.MainWindowUI):
     # --- カメラ映像をGUIに反映する関数 ---
     def update_video_feeds(self):
         for controller in self.cameras.controllers:
+            # タイマー更新時
             frame = controller.get_current_frame()  # 最新フレームを取得 (BGR形式)
-
             if frame is not None:
-                # OpenCV(BGR) -> Qt(RGB) 変換
-                rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                # 評価実行 (画像処理 + YOLO)
+                annotated_frame, result = self.detector.evaluate_frame(frame, controller.name, self.current_id)
+
+                # 描画用には annotated_frame を使用
+                rgb_image = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
                 h, w, ch = rgb_image.shape
                 bytes_per_line = ch * w
                 qt_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format_RGB888)
@@ -214,6 +220,8 @@ class MainWindow(module_gui.MainWindowUI):
         self.relay.close()
         self.cameras.stop_all_get_frame() # カメラ停止
         self.run_in_background(self.__async_raspi_request, "/cleanup_system")
+        if hasattr(self, 'detector') and self.detector is not None:
+            self.detector.close() # これを必ず呼ぶ
 
         self.close()                    # アプリケーションを閉じる
 

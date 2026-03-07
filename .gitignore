@@ -14,5 +14,7 @@ wheels/
 unused_file/
 sample_move_check/
 cam_video/
+results/
+evaluated_videos/
 
 # Python files

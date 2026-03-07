@@ -39,7 +39,7 @@ TriggerSelector	FrameStart
 TriggerActivation	{TriggerSelector=FrameStart}	RisingEdge
 TriggerSelector	FrameStart
 ExposureMode	Timed
-AcquisitionFramePeriodRaw	25000
+AcquisitionFramePeriodRaw	50000
 LightSourcePreset	Off
 BalanceRatioRaw	{BalanceRatioSelector=Red}	90
 BalanceRatioRaw	{BalanceRatioSelector=Green}	64
