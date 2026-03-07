@@ -11,4 +11,5 @@ dependencies = [
     "pypylon>=4.2.0",
     "pyside6[tools]>=6.10.1",
     "requests>=2.32.5",
+    "ultralytics>=8.4.21",
 ]

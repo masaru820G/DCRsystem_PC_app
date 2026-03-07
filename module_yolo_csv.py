@@ -4,52 +4,129 @@
 import os
 import csv
 import time
-import threading
 import cv2
-from ultralytics import yolo
-
-# 制御モジュール
-import module_cameras_5goki as cam_ctr
-import module_patlite as p_ctr
-import module_relay as r_ctr
+import numpy as np
+from datetime import datetime
+from ultralytics import YOLO
 
 # ==========================================================
-# 定数定義
+# 定数定義 (yolo_tra_camera_v7_1023 準拠)
 # ==========================================================
-YOLO_IMG_SIZE = 800
+YOLO_IMG_SIZE = 640
+CSV_DIR = "results"
+MIN_AREA = 10000  # 検出とみなす最小面積
+
+# 赤色抽出用のHSV閾値
+H1_LOW, H1_HIGH = np.array([0, 70, 60]), np.array([25, 255, 255])
+H2_LOW, H2_HIGH = np.array([165, 70, 60]), np.array([180, 255, 255])
 
 # ==========================================================
-# トリガーチェック関数
-# ==========================================================
-def trigger_check(img,):
-
-# ==========================================================
-# 評価結果を.csvに格納する関数
-# ==========================================================
-def save_result_csv(id, label, confidence):
-
-
-# ==========================================================
-# 汎用バックグラウンドタスク用クラス
+# 判定結果データクラス
 # ==========================================================
 class YoloResult:
-    def __init__(self, obj_id, label, confidence):
-        """コンストラクタ: 変数の初期化"""
-        self.obj_id = obj_id            # 検出物体ID
-        self.label = label              # 検出ラベル
-        self.confidence = confidence    # 信頼度
+    def __init__(self, cam_name, obj_id, label_id, label_name, confidence, target_found):
+        self.timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        self.cam_name = cam_name
+        self.obj_id = obj_id
+        self.label_id = label_id
+        self.label_name = label_name
+        self.confidence = confidence
+        self.target_found = target_found  # 赤色ターゲットの有無
 
+# ==========================================================
+# YOLO検出・画像処理クラス
+# ==========================================================
 class YoloDetector:
     def __init__(self, model_path='best.pt'):
-        print("YOLOモデルをロード中...")
+        print(f"YOLOモデル {model_path} をロード中...")
         self.model = YOLO(model_path)
-        print("YOLOロード完了")
+        if not os.path.exists(CSV_DIR):
+            os.makedirs(CSV_DIR)
+        self.csv_path = os.path.join(CSV_DIR, f"result_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+        self._init_csv()
 
-    def detect(self, image):
-        """画像を受け取り、検出結果画像を返す"""
-        results = self.model(image, verbose=False)
-        # 検出結果が描画された画像を返す（GUI表示用）
+    def _init_csv(self):
+        with open(self.csv_path, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(["Timestamp", "Camera", "ID", "LabelID", "LabelName", "Confidence", "TargetFound"])
+
+    def detect_target_hsv(self, frame):
+        """HSVによる赤色領域の抽出ロジック"""
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        mask1 = cv2.inRange(hsv, H1_LOW, H1_HIGH)
+        mask2 = cv2.inRange(hsv, H2_LOW, H2_HIGH)
+        mask = mask1 + mask2
+        
+        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask)
+        
+        coordinates = []
+        target_found = False
+        
+        for i in range(1, num_labels):
+            x, y, w, h, area = stats[i]
+            mx, my = int(centroids[i][0]), int(centroids[i][1])
+            
+            # yolo_tra_camera_v7_1023 の条件を適用
+            if 100 < mx < 1200 and area > MIN_AREA:
+                target_found = True
+                coordinates.append((y, y+h, x, x+w, mx, my, area))
+        
+        return target_found, coordinates
+
+    def preprocess_image(self, frame, target_found, coordinates):
+        """検出状況に合わせたクロップとリサイズ"""
+        h, w = frame.shape[:2]
+        
+        if target_found and coordinates:
+            # 最初のターゲットを中心に正方形で切り出すロジック
+            top, bottom, left, right, mx, my, s = coordinates[0]
+            ch, cw = bottom - top, right - left
+            side = max(ch, cw)
+            
+            # 中心を維持しつつ正方形の範囲を計算
+            y1, y2 = max(0, my - side//2), min(h, my + side//2)
+            x1, x2 = max(0, mx - side//2), min(w, mx + side//2)
+            cropped = frame[y1:y2, x1:x2]
+        else:
+            # ターゲットがない場合は中央をクロップ
+            size = min(h, w) // 2
+            cx, cy = w // 2, h // 2
+            cropped = frame[cy-size:cy+size, cx-size:cx+size]
+            
+        if cropped.size == 0:
+            return cv2.resize(frame, (YOLO_IMG_SIZE, YOLO_IMG_SIZE))
+            
+        return cv2.resize(cropped, (YOLO_IMG_SIZE, YOLO_IMG_SIZE), interpolation=cv2.INTER_AREA)
+
+    def evaluate_frame(self, frame, cam_name, obj_id):
+        """画像処理から推論、結果保持までを一括実行"""
+        # 1. ターゲット検知
+        found, coords = self.detect_target_hsv(frame)
+        
+        # 2. 前処理（クロップ・リサイズ）
+        input_img = self.preprocess_image(frame, found, coords)
+        
+        # 3. YOLO推論
+        results = self.model.track(input_img, persist=True, verbose=False)
         annotated_frame = results[0].plot()
         
-        # 必要であれば、ここで「傷あり」「良品」などのテキスト判定結果も返せます
-        return annotated_frame
+        # 4. 結果のパース
+        best_result = None
+        if len(results[0].boxes) > 0:
+            box = results[0].boxes[0]
+            label_id = int(box.cls)
+            label_name = self.model.names[label_id]
+            conf = float(box.conf)
+            best_result = YoloResult(cam_name, obj_id, label_id, label_name, conf, found)
+            self.save_result_csv(best_result)
+        else:
+            # 検出なしの場合
+            best_result = YoloResult(cam_name, obj_id, -1, "None", 0.0, found)
+            
+        return annotated_frame, best_result
+
+    def save_result_csv(self, res: YoloResult):
+        """CSVへの書き込み"""
+        with open(self.csv_path, 'a', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow([res.timestamp, res.cam_name, res.obj_id, res.label_id, res.label_name, f"{res.confidence:.2f}", res.target_found])
