@@ -17,6 +17,7 @@ import module_gui
 import module_patlite as p_ctr
 import module_relay as r_ctr
 import module_cameras_5goki as cam_ctr
+#import module_yolo_csv as yolo_ctr
 import module_yolo_csv as yolo_ctr
 
 RPI_IP_ADDRESS = "192.168.2.1"
@@ -36,7 +37,7 @@ class TaskWorker(QRunnable):
         try:
             self.func(*self.args, **self.kwargs)            # 渡された関数を実行 (引数付き)
         except Exception as e:
-            print(f" !! [Background Task Error]: {e}")
+            print(f"!![Background Task Error]: {e}")
 
 # ==========================================================
 # スタートアップウィンドウ
@@ -113,15 +114,15 @@ class MainWindow(module_gui.MainWindowUI):
         # 各デバイス接続処理
         self.patlite = p_ctr.PatliteController()
         if not self.patlite.init():
-            print("パトライトの接続に失敗しました")
+            print("!!パトライトの接続に失敗しました")
             self.close()
         self.relay = r_ctr.RelayController()
         if not self.relay.init():
-            print("リレーボードの接続に失敗しました")
+            print("!!リレーボードの接続に失敗しました")
             self.close()
         self.cameras = cam_ctr.CameraManager()
         if not self.cameras.init_cameras():
-            print("カメラの接続に失敗しました")
+            print("!!カメラの接続に失敗しました")
             self.close()
 
         # YOLO初期化・一度だけロード
@@ -134,7 +135,7 @@ class MainWindow(module_gui.MainWindowUI):
             # 先に映る下流側のカメラ（under, inside）に遅延を設定
             if controller.name in ["cam_under", "cam_inside"]:
                 controller.delay_seconds = DELAY_TIME_SEC
-                print(f"  [Sync] {controller.name} に {DELAY_TIME_SEC} 秒の表示遅延を設定しました")
+                print(f"[Success] {controller.name} に {DELAY_TIME_SEC} 秒の表示遅延を設定しました")
         self.cameras.start_all_get_frame() # 起動と同時にキャプチャ開始
 
         # イベント接続
@@ -155,12 +156,17 @@ class MainWindow(module_gui.MainWindowUI):
 
     # --- カメラ映像をGUIに反映する関数 ---
     def update_video_feeds(self):
+        # トグルスイッチがOFFの場合は推論や更新を行わないならここで return してもOKです
         for controller in self.cameras.controllers:
             # タイマー更新時
             frame = controller.get_current_frame()  # 最新フレームを取得 (BGR形式)
             if frame is not None:
-                # 評価実行 (画像処理 + YOLO)
-                annotated_frame, result = self.detector.evaluate_frame(frame, controller.name, self.current_id)
+                # ★戻り値を3つ(annotated_frame, result, finalized_result)で受け取るように修正
+                annotated_frame, result, finalized_result = self.detector.evaluate_frame(frame, controller.name, self.current_id)
+
+                # ★もしサクランボが画面から出て最終結果が確定していたら、GUIとパトライトを更新する
+                if finalized_result is not None:
+                    self.process_final_result(finalized_result)
 
                 # 描画用には annotated_frame を使用
                 rgb_image = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
@@ -198,10 +204,10 @@ class MainWindow(module_gui.MainWindowUI):
     def __async_raspi_request(self, command):
         url = f"http://{RPI_IP_ADDRESS}:{RPI_PORT}{command}"
         try:
-            print(f" >> [Sending]: {url}")
+            print(f">>>[Sending]: {url}")
             requests.get(url, timeout=2)
         except Exception as e:
-            print(f" !! [Net Error]: {e}")
+            print(f"!![Net Error]: {e}")
 
     # --- 設定ボタン押下イベント -------------------
     @Slot()
@@ -225,6 +231,79 @@ class MainWindow(module_gui.MainWindowUI):
 
         self.close()                    # アプリケーションを閉じる
 
+    # --- 確定した推論結果をGUIとパトライトに反映する関数 ------------
+    def process_final_result(self, result_obj):
+        # トグルスイッチがOFFなら、動作させない
+        if not self.toggle_switch.isChecked():
+            return
+
+        disease_name = result_obj.label_name
+        confidence_percent = int(result_obj.confidence * 100)
+        obj_id = result_obj.id
+
+        pattern = None
+        channel = None
+        display_name = ""
+
+        if disease_name == "mold":
+            pattern = p_ctr.LedPattern.VIOLET
+            channel = r_ctr.RelayChannel.REMOVE
+            display_name = "カビ"
+            self.label_dam.setText("カビ")
+            self.label_dam.setStyleSheet("""
+                font-family: "Meiryo"; font-size: 30px; font-weight: bold;
+                color: #FFFFFF; background-color: #800080;
+                border: 1px solid #000000;
+                qproperty-alignment: 'AlignCenter';
+            """)
+        elif disease_name == "unripe":
+            pattern = p_ctr.LedPattern.YELLOW
+            channel = r_ctr.RelayChannel.REMOVE
+            display_name = "未熟果"
+            self.label_dam.setText("未熟果")
+            self.label_dam.setStyleSheet("""
+                font-family: "Meiryo"; font-size: 30px; font-weight: bold;
+                color: #000000; background-color: #FFFF00;
+                border: 1px solid #000000;
+                qproperty-alignment: 'AlignCenter';
+            """)
+        elif disease_name == "bowlcrack":
+            pattern = p_ctr.LedPattern.BLUE
+            channel = r_ctr.RelayChannel.REMOVE
+            display_name = "果梗裂果"
+            self.label_dam.setText("果梗裂果")
+            self.label_dam.setStyleSheet("""
+                font-family: "Meiryo"; font-size: 30px; font-weight: bold;
+                color: #000000; background-color: #0040FF;
+                border: 1px solid #000000;
+                qproperty-alignment: 'AlignCenter';
+            """)
+
+        # 判定処理が行われた場合のみ履歴更新
+        if pattern is not None:
+            # デバイス制御 (非同期)
+            self.run_in_background(self.patlite.set_color, pattern)
+            self.run_in_background(self.relay.move, channel, self.saved_speed)
+
+            # 履歴データの追加処理 (キー入力時のランダム値ではなく、実際のYOLO結果を使用)
+            record = {
+                "id": obj_id,
+                "result": display_name,
+                "conf": confidence_percent
+            }
+            self.history_data.append(record)
+
+            # 古いものを削除
+            if len(self.history_data) > 10:
+                self.history_data.pop(0)
+
+            # 確認用ログ
+            #_, color_name = pattern
+            #print(f"Latest History: | ID: {record['id']:03} | 判定結果: {record['result']}({color_name}) | 信頼度: {record['conf']} % |")
+
+            # 画面更新
+            self.update_history_display()
+
     # --- 履歴表示を更新する関数 (HTMLテーブル版) -------------------
     def update_history_display(self):
         # 履歴データをHTMLのテーブル行(tr)に変換する
@@ -239,8 +318,6 @@ class MainWindow(module_gui.MainWindowUI):
                 color_code = "#EE82EE"
             elif "未熟果" in raw_text:
                 color_code = "#FFFF00"
-            elif "健全果" in raw_text:
-                color_code = "#FFFFFF"
             elif "果梗裂果" in raw_text:
                 color_code = "#0040FF"
 
@@ -293,90 +370,6 @@ class MainWindow(module_gui.MainWindowUI):
         """
 
         self.label_history.setText(full_html)
-
-    # --- キー入力イベント ------------------------------------------
-    def keyPressEvent(self, event: QKeyEvent):
-        # トグルスイッチがOFFなら、処理しない
-        if not self.toggle_switch.isChecked():
-            super().keyPressEvent(event)
-            return
-
-        disease_name = ""
-        pattern = None
-
-        if event.key() == Qt.Key.Key_1:
-            disease_name = "カビ"
-            pattern = p_ctr.LedPattern.VIOLET
-            channel = r_ctr.RelayChannel.REMOVE
-            self.label_dam.setText("カビ")
-            self.label_dam.setStyleSheet("""
-                font-family: "Meiryo"; font-size: 30px; font-weight: bold;
-                color: #FFFFFF; background-color: #800080;
-                border: 1px solid #000000;
-                qproperty-alignment: 'AlignCenter';
-            """)
-        elif event.key() == Qt.Key.Key_2:
-            disease_name = "未熟果"
-            pattern = p_ctr.LedPattern.YELLOW
-            channel = r_ctr.RelayChannel.REMOVE
-            self.label_dam.setText("未熟果")
-            self.label_dam.setStyleSheet("""
-                font-family: "Meiryo"; font-size: 30px; font-weight: bold;
-                color: #000000; background-color: #FFFF00;
-                border: 1px solid #000000;
-                qproperty-alignment: 'AlignCenter';
-            """)
-        elif event.key() == Qt.Key.Key_3:
-            disease_name = "健全果"
-            pattern = p_ctr.LedPattern.WHITE
-            channel = r_ctr.RelayChannel.TRANSPORT
-            self.label_dam.setText("健全果")
-            self.label_dam.setStyleSheet("""
-                font-family: "Meiryo"; font-size: 30px; font-weight: bold;
-                color: #000000; background-color: #FFFFFF;
-                border: 1px solid #000000;
-                qproperty-alignment: 'AlignCenter';
-            """)
-        elif event.key() == Qt.Key.Key_4:
-            disease_name = "果梗裂果"
-            pattern = p_ctr.LedPattern.BLUE
-            channel = r_ctr.RelayChannel.REMOVE
-            self.label_dam.setText("果梗裂果")
-            self.label_dam.setStyleSheet("""
-                font-family: "Meiryo"; font-size: 30px; font-weight: bold;
-                color: #000000; background-color: #0040FF;
-                border: 1px solid #000000;
-                qproperty-alignment: 'AlignCenter';
-            """)
-
-        # 判定処理が行われた場合のみ履歴更新
-        if disease_name != "":
-            # デバイス制御 (非同期)
-            self.run_in_background(self.patlite.set_color, pattern)
-            self.run_in_background(self.relay.move, channel, self.saved_speed)
-
-            # 履歴データの追加処理
-            confidence = random.randint(60, 95) # 信頼度ランダム (60~95)
-            # 辞書として作成
-            record = {
-                "id": self.current_id,
-                "result": disease_name,
-                "conf": confidence
-            }
-            self.history_data.append(record)    # リスト追加
-
-            # 古いものを削除
-            if len(self.history_data) > 10:
-                self.history_data.pop(0)
-            # IDを加算
-            self.current_id += 1
-            # 確認用ログ
-            _, color_name = pattern
-            print(f"Latest History: | ID: {record['id']:03} | 判定結果: {record['result']}({color_name}) | 信頼度: {record['conf']} % |")
-            # 画面更新
-            self.update_history_display()
-        else:
-            super().keyPressEvent(event)
 
     # --- トグルスイッチ状態変更イベント --------------------------
     @Slot(bool)

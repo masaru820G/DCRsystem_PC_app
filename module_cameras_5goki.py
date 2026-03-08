@@ -28,7 +28,7 @@ FOLDER_CHILD = [
 
 VIDEO_CODEC = 'mp4v'
 VIDEO_EXIT = '.mp4'
-FPS = 40.0
+FPS = 20.0
 
 def setup_folders():
     try:
@@ -42,7 +42,7 @@ def setup_folders():
             paths.append(path)
         return paths
     except OSError as e:
-        print(f"フォルダ作成エラー: {e}")
+        print(f"!!フォルダ作成エラー: {e}")
         sys.exit(1)
 
 # ==========================================================
@@ -106,7 +106,7 @@ class CameraController:
         self.device_info = device_info
         self.save_path = save_path
         self.name = cam_name
-        self.settings_file = f"{self.name}.pfs"
+        self.settings_file = f"cam_pfs{self.name}.pfs"
 
         self.camera = None
         self.video_writer = None
@@ -136,16 +136,16 @@ class CameraController:
             # --- カスタムPFSロード ---
             if os.path.exists(self.settings_file):
                 load_pfs_custom(self.camera, self.settings_file)
-                print(f"  [Load Success] {self.name}: 設定を精密に適用しました")
+                print(f"[Success] {self.name}: 設定を精密に適用しました")
             
             # 設定後の解像度を取得
             self.width = self.camera.Width.Value
             self.height = self.camera.Height.Value
-            print(f"  [Info] {self.name} Resolution: {self.width}x{self.height}")
+            print(f"[Info] {self.name} Resolution: {self.width}x{self.height}")
 
             return True
         except Exception as e:
-            print(f"カメラ初期化エラー ({self.name}): {e}")
+            print(f"!!カメラ初期化エラー ({self.name}): {e}")
             return False
 
     def start_recording(self):
@@ -195,7 +195,7 @@ class CameraController:
                 
                 grab_result.Release()
             except Exception as e:
-                print(f"Loop Error ({self.name}): {e}")
+                print(f"!!Loop Error ({self.name}): {e}")
                 break
 
     def stop_recording(self):
@@ -226,7 +226,7 @@ class CameraManager:
             tl_factory = pylon.TlFactory.GetInstance()
             devices = tl_factory.EnumerateDevices()
         except Exception as e:
-            print(f"Pylon初期化エラー: {e}")
+            print(f"!!Pylon初期化エラー: {e}")
             return False
 
         if not devices:

@@ -12,4 +12,17 @@ dependencies = [
     "pyside6[tools]>=6.10.1",
     "requests>=2.32.5",
     "ultralytics>=8.4.21",
+    "torch",
+    "torchvision",
+    "torchaudio",
 ]
+
+[[tool.uv.index]]
+name = "pytorch-gpu"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-gpu" }
+torchvision = { index = "pytorch-gpu" }
+torchaudio = { index = "pytorch-gpu" }

@@ -243,7 +243,7 @@ class SubWindowUI(QWidget):
         down_speed_y = SUB_WINDOW_H - ICON_DOWN_SPEED_SIZE_H - MARGIN_Y * 3  # 下からの余白
 
         # up_speedボタン
-        pixmap = QPixmap(resource_path("up_speed.png"))
+        pixmap = QPixmap(resource_path("Icon/up_speed.png"))
         self.button_up_speed = ClickableLabel(self)
         self.button_up_speed.setFixedSize(ICON_UP_SPEED_SIZE_W, ICON_UP_SPEED_SIZE_H)
         self.button_up_speed.move(up_speed_x, up_speed_y)
@@ -257,7 +257,7 @@ class SubWindowUI(QWidget):
         self.label_current_speed.move(speed_label_x, speed_label_y)
 
         # down_speedボタン
-        pixmap = QPixmap(resource_path("down_speed.png"))
+        pixmap = QPixmap(resource_path("Icon/down_speed.png"))
         self.button_down_speed = ClickableLabel(self)
         self.button_down_speed.setFixedSize(ICON_DOWN_SPEED_SIZE_W, ICON_DOWN_SPEED_SIZE_H)
         self.button_down_speed.move(down_speed_x, down_speed_y)
@@ -314,7 +314,7 @@ class MainWindowUI(QMainWindow):
         setting_x = BASE_X + MARGIN_X
         setting_y = MARGIN_Y
 
-        pixmap = QPixmap(resource_path("setting.png"))
+        pixmap = QPixmap(resource_path("Icon/setting.png"))
         self.button_setting = ClickableLabel(self)
         self.button_setting.setFixedSize(ICON_SETTING_SIZE, ICON_SETTING_SIZE)
         self.button_setting.move(setting_x, setting_y)
@@ -326,7 +326,7 @@ class MainWindowUI(QMainWindow):
         power_x = WINDOW_W - ICON_POWER_SIZE - MARGIN_X
         power_y = MARGIN_Y
 
-        pixmap = QPixmap(resource_path("power_supply.png"))
+        pixmap = QPixmap(resource_path("Icon/power_supply.png"))
         self.button_power = ClickableLabel(self)
         self.button_power.setFixedSize(ICON_POWER_SIZE, ICON_POWER_SIZE)
         self.button_power.move(power_x, power_y)
