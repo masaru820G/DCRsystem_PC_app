@@ -11,11 +11,10 @@ wheels/
 # requirements files
 
 # Folder
-unused_file/
-sample_move_check/
 cam_video/
 evaluated_csv/
 evaluated_videos/
 kari/
+Trained_Models/
 
 # Python files
